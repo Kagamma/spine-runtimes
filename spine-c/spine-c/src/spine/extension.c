@@ -134,3 +134,16 @@ float _spMath_pow2_apply(float a) {
 float _spMath_pow2out_apply(float a) {
 	return POW(a - 1, 2) * -1 + 1;
 }
+
+/*
+ * Functions that must be implemented:
+ */
+
+void _spAtlasPage_createTexture(spAtlasPage *self, const char *path) {
+}
+
+void _spAtlasPage_disposeTexture(spAtlasPage *self) {
+}
+
+char *_spUtil_readFile(const char *path, int *length) {
+}
