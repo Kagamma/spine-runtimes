@@ -139,11 +139,48 @@ float _spMath_pow2out_apply(float a) {
  * Functions that must be implemented:
  */
 
+loader_load_file_t loader_load_file = NULL;
+loader_load_texture_t loader_load_texture = NULL;
+loader_free_texture_t loader_free_texture = NULL;
+
+void Spine_Loader_RegisterLoadRoutine(loader_load_file_t func) {
+	loader_load_file = func;
+}
+
+void Spine_Loader_RegisterLoadTextureRoutine(loader_load_texture_t func) {
+	loader_load_texture = func;
+}
+
+void Spine_Loader_RegisterFreeTextureRoutine(loader_free_texture_t func) {
+	loader_free_texture = func;
+}
+
 void _spAtlasPage_createTexture(spAtlasPage *self, const char *path) {
+	if (loader_load_texture != NULL) {
+	  void* texture;
+		int width, height;
+		loader_load_texture(path, texture, &width, &height);
+		self->rendererObject = texture;
+		self->width = width;
+		self->height = height;
+	}
 }
 
 void _spAtlasPage_disposeTexture(spAtlasPage *self) {
+	if (loader_free_texture != NULL) {
+		void* texture = self->rendererObject;
+		loader_free_texture(texture);
+	}
 }
 
+// TODO: path is UTF-8?
 char *_spUtil_readFile(const char *path, int *length) {
+	if (loader_load_file != NULL) {
+		char* data;
+		int len;
+    loader_load_file(path, &data, &len);
+		return data;
+	} else {
+		return NULL;
+	}
 }

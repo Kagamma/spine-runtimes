@@ -1,6 +1,7 @@
 .metadata/
 RemoteSystemsTempFiles/
 target
+build-win64
 *Debug.win32
 *.sdf
 *.opensdf
