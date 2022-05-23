@@ -9,7 +9,8 @@ interface
 
 uses Classes,
   CastleVectors, CastleUIState, CastleComponentSerialize,
-  CastleUIControls, CastleControls, CastleKeysMouse;
+  CastleUIControls, CastleControls, CastleKeysMouse,
+  CastleSpine;
 
 type
   { Main state, where most of the application logic takes place. }

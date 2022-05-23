@@ -3,27 +3,27 @@ unit CastleSpine;
 interface
 
 uses
-  Spine;
+  Classes, SysUtils, Spine,
+  CastleDownload, CastleLog;
 
 implementation
 
 { Provide loader function for Spine }
-procedure LoaderLoad(FileName: PWideChar; var MS: TMemoryStream; var Data: Pointer; var Size: LongWord); cdecl;
+procedure LoaderLoad(FileName: PChar; var Data: Pointer; var Size: LongWord); cdecl;
 var
   S: String;
   MS: TMemoryStream;
 begin
   try
     S := FileName;
-    // In case it load a material, force it to load .efkmat instead of .efkmatd
-    if LowerCase(ExtractFileExt(FileName)) = '.efkmatd' then
-      Delete(S, Length(S), 1);
     MS := Download(S, [soForceMemoryStream]) as TMemoryStream;
     // Data is managed by spine-c, so we call malloc
     Data := _spMalloc(Size, nil, 0);
     Size := MS.Size;
     // Copy data from MS to Data
     Move(MS.Memory^, Data^, Size);
+    //
+    MS.Free;
   except
     // We ignore exception, and return null instead
     on E: Exception do

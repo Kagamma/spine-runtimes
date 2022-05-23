@@ -12,6 +12,7 @@ build-win64
 *.cachefile
 *.swp
 *.user
+*.res
 .DS_Store
 
 .idea/

@@ -15,7 +15,7 @@ interface
 
 uses
   Classes,
-  ctypes, dynlibs, ctypes;
+  ctypes, dynlibs;
 
 type
   TspBlendMode = (
@@ -56,6 +56,11 @@ type
     SP_ATLAS_REPEAT
   );
 
+  TspColor = record
+    r, g, b, a: cfloat;
+  end;
+  PspColor = ^TspColor;
+
   PspKeyValueArray = Pointer;
 
   PspSkeletonData = Pointer;
@@ -88,6 +93,7 @@ type
 
   PspAtlas = Pointer;
 
+  PspAtlasPage = ^TspAtlasPage;
   TspAtlasPage = record
     atlas: PspAtlas;
     name: PChar;
@@ -99,8 +105,8 @@ type
     pma: cint;
     next: PspAtlasPage;
   end;
-  PspAtlasPage = ^TspAtlasPage;
 
+  PspAtlasRegion = ^TspAtlasRegion;
   TspAtlasRegion = record
     name: PChar;
     x, y, width, height: cint;
@@ -115,7 +121,6 @@ type
     page: PspAtlasPage;
     next: PspAtlasRegion;
   end;
-  PspAtlasRegion = ^TspAtlasRegion;
 
   PspBone = Pointer;
   PPspBone = ^PspBone;
@@ -131,11 +136,6 @@ type
 
   PspSkin = Pointer;
   PPspSkin = ^PspSkin;
-
-  TspColor = record
-    r, g, b, a: cfloat;
-  end;
-  PspColor = ^TspColor;
 
   TspSlotData = record
     index_: cint;
@@ -179,18 +179,19 @@ type
     x, y: cfloat;
   end;
 
+  PspVertexAttachment = ^TspVertexAttachment;
   TspVertexAttachment = record
     super: TspAttachment;
-    bonesCount: int;
-    bones: ^int;
-    verticesCount: int;
+    bonesCount: cint;
+    bones: ^cint;
+    verticesCount: cint;
     vertices: ^cfloat;
     worldVerticesLength: cint;
     deformAttachment: PspVertexAttachment;
     id: cint;
   end;
-  PspVertexAttachment = ^spVertexAttachment;
 
+  PspMeshAttachment = ^TspMeshAttachment;
   TspMeshAttachment = record
     super: TspVertexAttachment;
     rendererObject: Pointer;
@@ -208,16 +209,15 @@ type
     hullLength: cint;
     parentMesh: PspMeshAttachment;
     edgesCount: cint;
-    edges: ^int;
+    edges: ^cint;
     width, height: cfloat;
   end;
-  PspMeshAttachment = ^spMeshAttachment;
 
 var
   // ----- Loader -----
   { FileName: PWideChar; Data: Pointer; var Size: cuint32 }
   Spine_Loader_RegisterLoadRoutine: procedure(Func: Pointer); SPINECALL;
-  _spMalloc: procedure(Size: Caridnal; F: PChar; L: Integer); SPINECALL;
+  _spMalloc: function(Size: Cardinal; F: PChar; L: Integer): Pointer; SPINECALL;
 
 function Spine_Load: Boolean;
 
