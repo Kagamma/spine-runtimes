@@ -63,7 +63,10 @@ type
 
   PspKeyValueArray = Pointer;
 
+  PspSkeletonJson = Pointer;
   PspSkeletonData = Pointer;
+  PspAnimationStateData = Pointer;
+  PSpAnimationState = Pointer;
   PspBoneData = Pointer;
 
   PspAttachmentLoader = Pointer;
@@ -146,7 +149,7 @@ type
     darkColor: PspColor;
     blendMode: TspBlendMode;
   end;
-  PspSlotData = Pointer;
+  PspSlotData = ^TspSlotData;
 
   TspSlot = record
     data: PspSlotData;
@@ -159,13 +162,18 @@ type
   PspSlot = ^TspSlot;
   PPspSlot = ^PspSlot;
 
+  PSpSkeleton = ^TSpSkeleton;
   TspSkeleton = record
     data: PspSkeletonData;
+
     bonesCount: cint;
     bones: PPspBone;
     root: PspBone;
+
+    slotsCount: cint;
     slots: PPspSlot;
     drawOrder: PPspSlot;
+
     ikConstraintsCount: cint;
     ikConstraints: PPspIkConstraint;
     transformConstraintsCount: cint;
@@ -217,7 +225,36 @@ var
   // ----- Loader -----
   { FileName: PWideChar; Data: Pointer; var Size: cuint32 }
   Spine_Loader_RegisterLoadRoutine: procedure(Func: Pointer); SPINECALL;
+  Spine_Loader_RegisterLoadTextureRoutine: procedure(Func: Pointer); SPINECALL;
+  Spine_Loader_RegisterFreeTextureRoutine: procedure(Func: Pointer); SPINECALL;
+
+  // Memory management
   _spMalloc: function(Size: Cardinal; F: PChar; L: Integer): Pointer; SPINECALL;
+
+  // Atlas
+  spAtlas_create: function(Data: Pointer; Len: cint; Dir: PChar; rendererObject: Pointer): PspAtlas; SPINECALL;
+  spAtlas_dispose: procedure(Atlas: PspAtlas); SPINECALL;
+
+  // Skeleton
+  spSkeletonJson_create: function(Atlas: PspAtlas): PspSkeleton; SPINECALL;
+  spSkeletonJson_readSkeletonData: function(SkeletonJson: PspSkeletonJson; Data: PChar): PspSkeletonData; SPINECALL;
+  spSkeletonJson_dispose: procedure(SkeletonJson: PspSkeletonJson); SPINECALL;
+  spSkeleton_create: function(SkeletonData: PspSkeletonData): PspSkeleton; SPINECALL;
+  spSkeleton_dispose: procedure(Skeleton: PspSkeleton); SPINECALL;
+  spSkeletonData_dispose: procedure(SkeletonData: PspSkeletonData); SPINECALL;
+
+  // Animation
+  spAnimationStateData_create: function(SkeletonData: PspSkeletonData): PspAnimationStateData; SPINECALL;
+  spAnimationStateData_dispose: procedure(AnimationStateData: PspAnimationStateData); SPINECALL;
+  spAnimationStateData_setMixByName: procedure(AnimationStateData: PspAnimationStateData; FromName, ToName: PChar; Duration: cfloat); SPINECALL;
+  spAnimationState_setAnimationByName: procedure(AnimationState: PSpAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cint); SPINECALL;
+  spAnimationState_update: procedure(AnimationState: PSpAnimationState; Delta: cfloat); SPINECALL;
+  spAnimationState_apply: procedure(AnimationState: PSpAnimationState; Skeleton: PspSkeleton); SPINECALL;
+  spAnimationState_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
+
+  // Attachment
+  spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PSpBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
+  spVertexAttachment_computeWorldVertices: procedure(This: PspVertexAttachment; Slot: PSpSlot; Start, Count: cint; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
 
 function Spine_Load: Boolean;
 
@@ -235,7 +272,36 @@ begin;
   if Lib = dynlibs.NilHandle then Exit(False);
 
   Spine_Loader_RegisterLoadRoutine := GetProcedureAddress(Lib, 'Spine_Loader_RegisterLoadRoutine');
+  Spine_Loader_RegisterLoadTextureRoutine := GetProcedureAddress(Lib, 'Spine_Loader_RegisterLoadTextureRoutine');
+  Spine_Loader_RegisterFreeTextureRoutine := GetProcedureAddress(Lib, 'Spine_Loader_RegisterFreeTextureRoutine');
+
+  // Memory management
   _spMalloc := GetProcedureAddress(Lib, '_spMalloc');
+
+  // Atlas
+  spAtlas_create := GetProcedureAddress(Lib, 'spAtlas_create');
+  spAtlas_dispose := GetProcedureAddress(Lib, 'spAtlas_dispose');
+
+  // Skeleton
+  spSkeletonJson_create := GetProcedureAddress(Lib, 'spSkeletonJson_create');
+  spSkeletonJson_readSkeletonData := GetProcedureAddress(Lib, 'spSkeletonJson_readSkeletonData');
+  spSkeletonJson_dispose := GetProcedureAddress(Lib, 'spSkeletonJson_dispose');
+  spSkeleton_create := GetProcedureAddress(Lib, 'spSkeleton_create');
+  spSkeleton_dispose := GetProcedureAddress(Lib, 'spSkeleton_dispose');
+  spSkeletonData_dispose := GetProcedureAddress(Lib, 'spSkeletonData_dispose');
+
+  // Animation
+  spAnimationStateData_create := GetProcedureAddress(Lib, 'spAnimationStateData_create');
+  spAnimationStateData_dispose := GetProcedureAddress(Lib, 'spAnimationStateData_dispose');
+  spAnimationStateData_setMixByName := GetProcedureAddress(Lib, 'spAnimationStateData_setMixByName');
+  spAnimationState_setAnimationByName := GetProcedureAddress(Lib, 'spAnimationState_setAnimationByName');
+  spAnimationState_update := GetProcedureAddress(Lib, 'spAnimationState_update');
+  spAnimationState_apply := GetProcedureAddress(Lib, 'spAnimationState_apply');
+  spAnimationState_updateWorldTransform := GetProcedureAddress(Lib, 'spAnimationState_updateWorldTransform');
+
+  // Attachment
+  spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
+  spVertexAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spVertexAttachment_computeWorldVertices');
 
   Exit(True);
 end;
