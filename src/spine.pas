@@ -94,7 +94,7 @@ type
   end;
   PspRegionAttachment = ^TspRegionAttachment;
 
-  PspAtlas = Pointer;
+  PspAtlas = ^TspAtlas;
 
   PspAtlasPage = ^TspAtlasPage;
   TspAtlasPage = record
@@ -123,6 +123,12 @@ type
     keyValues: PspKeyValueArray;
     page: PspAtlasPage;
     next: PspAtlasRegion;
+  end;
+
+  TspAtlas = record
+    pages: PspAtlasPage;
+    regions: PspAtlasRegion;
+    rendererObject: Pointer;
   end;
 
   PspBone = Pointer;

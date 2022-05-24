@@ -243,20 +243,16 @@ var
       if Attachment = nil then continue;
       // TODO: Set blend mode
       case Slot^.data^.blendMode of
-        SP_BLEND_MODE_NORMAL:
-          begin
-          end;
         SP_BLEND_MODE_ADDITIVE:
           begin
-          end;
-        SP_BLEND_MODE_MULTIPLY:
-          begin
-          end;
-        SP_BLEND_MODE_SCREEN:
-          begin
+            glBlendFunc(GL_ONE, GL_ONE);
           end;
         else
           begin
+            if Self.FSpAtlas^.pages^.pma <> 0 then
+              glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+            else
+              glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
           end;
       end;
       VertexCount := 0;
