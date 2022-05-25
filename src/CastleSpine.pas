@@ -250,12 +250,19 @@ var
 begin
   Self.Cleanup;
 
+  if Self.FURL = '' then
+  begin
+    Self.FIsNeedRefresh := False;
+    Exit;
+  end;
+
   Path := ExtractFilePath(Self.FURL);
   SkeletonFullPath := Self.FURL;
   AtlasFullPath := Path + StringReplace(ExtractFileName(Self.FURL), ExtractFileExt(Self.FURL), '', [rfReplaceAll]) + '.atlas';
 
   // Load atlas
   MS := Download(AtlasFullPath, [soForceMemoryStream]) as TMemoryStream;
+  Self.FspAtlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path), nil);
   Self.FspAtlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path), nil);
   MS.Free;
 
@@ -290,6 +297,8 @@ end;
 
 procedure TCastleSpine.Cleanup;
 begin
+  if Self.FspAnimationState <> nil then
+    spAnimationState_dispose(Self.FspAnimationState);
   if Self.FspAtlas <> nil then
     spAtlas_dispose(Self.FspAtlas);
   if Self.FspSkeletonJson <> nil then
@@ -300,6 +309,12 @@ begin
     spAnimationStateData_dispose(Self.FspAnimationStateData);
   if Self.FspSkeleton <> nil then
     spSkeleton_dispose(Self.FspSkeleton);
+  Self.FspAtlas := nil;
+  Self.FspSkeletonJson := nil;
+  Self.FspSkeletonData := nil;
+  Self.FspAnimationStateData := nil;
+  Self.FspSkeleton := nil;
+  Self.FspAnimationState := nil;
 end;
 
 procedure TCastleSpine.SetAutoAnimation(S: String);

@@ -310,6 +310,7 @@ var
   spAnimationState_update: procedure(AnimationState: PspAnimationState; Delta: cfloat); SPINECALL;
   spAnimationState_apply: procedure(AnimationState: PspAnimationState; Skeleton: PspSkeleton); SPINECALL;
   spAnimationState_create: function(Data: PspAnimationStateData): PspAnimationState; SPINECALL;
+  spAnimationState_dispose: procedure(Data: PspAnimationState); SPINECALL;
 
   // Attachment
   spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PspBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
@@ -375,6 +376,7 @@ begin;
   spAnimationState_update := GetProcedureAddress(Lib, 'spAnimationState_update');
   spAnimationState_apply := GetProcedureAddress(Lib, 'spAnimationState_apply');
   spAnimationState_create := GetProcedureAddress(Lib, 'spAnimationState_create');
+  spAnimationState_dispose := GetProcedureAddress(Lib, 'spAnimationState_create');
 
 
   // Attachment
