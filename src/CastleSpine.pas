@@ -62,6 +62,7 @@ type
     FspAnimationStateData: PspAnimationStateData;
     FspSkeleton: PspSkeleton;
     FspAnimationState: PspAnimationState;
+    FspSkeletonBounds: PspSkeletonBounds;
     FIsNeedRefresh: Boolean;
     FPreviousAnimation: String;
     FIsAnimationPlaying: Boolean;
@@ -80,6 +81,7 @@ type
     procedure GLContextClose; override;
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     procedure LocalRender(const Params: TRenderParams); override;
+    function LocalBoundingBox: TBox3D; override;
     function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true): boolean; overload;
     function PlayAnimation(const Parameters: TPlayAnimationParameters): boolean; overload;
     procedure StopAnimation;
@@ -284,6 +286,10 @@ begin
   // Create skeleton
   Self.FspSkeleton := spSkeleton_create(Self.FspSkeletonData);
 
+  // Create boundingbox
+  Self.FspSkeletonBounds := spSkeletonBounds_create();
+  spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
+
   // Load animation list
   Self.AnimationsList.Clear;
   for I := 0 to Self.FspSkeletonData^.animationsCount - 1 do
@@ -308,12 +314,15 @@ begin
     spAnimationStateData_dispose(Self.FspAnimationStateData);
   if Self.FspSkeleton <> nil then
     spSkeleton_dispose(Self.FspSkeleton);
+  if Self.FspSkeleton <> nil then
+    spSkeletonBounds_dispose(Self.FspSkeletonBounds);
   Self.FspAtlas := nil;
   Self.FspSkeletonJson := nil;
   Self.FspSkeletonData := nil;
   Self.FspAnimationStateData := nil;
   Self.FspSkeleton := nil;
   Self.FspAnimationState := nil;
+  Self.FspSkeletonBounds := nil;
 end;
 
 procedure TCastleSpine.SetAutoAnimation(S: String);
@@ -378,9 +387,13 @@ begin
     if Self.FIsAnimationPlaying and Self.ProcessEvents then
     begin
       if (Self.AnimateOnlyWhenVisible and Self.Visible) or (not Self.AnimateOnlyWhenVisible) then
+      begin
         spAnimationState_update(Self.FspAnimationState, F);
+        spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
+        spSkeleton_updateWorldTransform(Self.FspSkeleton);
+        spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
+      end;
     end;
-    spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
   end;
 end;
 
@@ -543,7 +556,6 @@ begin
   glDepthMask(GL_FALSE);
   glActiveTexture(GL_TEXTURE0);
 
-  spSkeleton_updateWorldTransform(FspSkeleton);
   RenderSkeleton(Self.FspSkeleton);
 
   glDisable(GL_BLEND);
@@ -551,6 +563,19 @@ begin
   glDepthMask(GL_TRUE);
 
   PreviousProgram.Enable;
+end;
+
+function TCastleSpine.LocalBoundingBox: TBox3D;
+begin
+  if (Self.FspSkeletonBounds <> nil) and Exists then
+  begin
+    Result := Box3D(
+      Vector3(Self.FspSkeletonBounds^.minX, Self.FspSkeletonBounds^.minY, -0.0001),
+      Vector3(Self.FspSkeletonBounds^.maxX, Self.FspSkeletonBounds^.maxY, 0.0001)
+    );
+  end else
+    Result := TBox3D.Empty;
+  Result.Include(inherited LocalBoundingBox);
 end;
 
 function TCastleSpine.PlayAnimation(const Parameters: TPlayAnimationParameters): boolean;

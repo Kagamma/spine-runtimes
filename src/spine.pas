@@ -79,6 +79,16 @@ type
   PspEventData = Pointer;
   PspTimelineArray = Pointer;
   PspPropertyIdArray = Pointer;
+  PspBoundingBoxAttachment = Pointer;
+  PspPolygon = Pointer;
+
+  PspSkeletonBounds = ^TspSkeletonBounds;
+  TspSkeletonBounds = record
+    count: cint;
+    boundingBoxes: ^PspBoundingBoxAttachment;
+    polygons: ^PspPolygon;
+	  minX, minY, maxX, maxY: cfloat;
+  end;
 
   PspAnimation = ^TspAnimation;
   TspAnimation = record
@@ -313,6 +323,11 @@ var
   spAnimationState_create: function(Data: PspAnimationStateData): PspAnimationState; SPINECALL;
   spAnimationState_dispose: procedure(Data: PspAnimationState); SPINECALL;
 
+  // BoundingBox
+  spSkeletonBounds_create: function: PspSkeletonBounds; SPINECALL;
+  spSkeletonBounds_dispose: procedure(Bounds: PspSkeletonBounds); SPINECALL;
+  spSkeletonBounds_update: procedure(Bounds: PspSkeletonBounds; Skeleton: PspSkeleton; updateAabb: cbool); SPINECALL;
+
   // Attachment
   spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PspBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
   spVertexAttachment_computeWorldVertices: procedure(This: PspVertexAttachment; Slot: PspSlot; Start, Count: cint; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
@@ -380,6 +395,10 @@ begin;
   spAnimationState_create := GetProcedureAddress(Lib, 'spAnimationState_create');
   spAnimationState_dispose := GetProcedureAddress(Lib, 'spAnimationState_create');
 
+  // BoundingBox
+  spSkeletonBounds_create := GetProcedureAddress(Lib, 'spSkeletonBounds_create');
+  spSkeletonBounds_dispose := GetProcedureAddress(Lib, 'spSkeletonBounds_dispose');
+  spSkeletonBounds_update := GetProcedureAddress(Lib, 'spSkeletonBounds_update');
 
   // Attachment
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
