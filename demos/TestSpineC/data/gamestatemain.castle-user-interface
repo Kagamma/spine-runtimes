@@ -29,21 +29,21 @@
         "$$ClassName" : "TCastleCamera",
         "InitialDirectionPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : 2.2276961803436279E-001,
-          "Y" : -2.7948048710823059E-001,
-          "Z" : -9.3395113945007324E-001
+          "X" : 1.9852794706821442E-001,
+          "Y" : -2.7840420603752136E-001,
+          "Z" : -9.3972218036651611E-001
         },
         "InitialPositionPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : -3.2922415733337402E+000,
-          "Y" : 4.8698534965515137E+000,
-          "Z" : 9.8391265869140625E+000
+          "X" : -4.6657733917236328E+000,
+          "Y" : 6.7960052490234375E+000,
+          "Z" : 1.6340707778930664E+001
         },
         "InitialUpPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : 6.4463585615158081E-002,
-          "Y" : 9.6015131473541260E-001,
-          "Z" : -2.7194467186927795E-001
+          "X" : 6.4425714313983917E-002,
+          "Y" : 9.6044021844863892E-001,
+          "Z" : -2.7093145251274109E-001
         },
         "Name" : "Camera",
         "Orthographic" : {
@@ -70,6 +70,10 @@
             "RenderOptions" : {
               "$$ClassName" : "TCastleScene.TSceneRenderOptions",
               "Name" : "RenderOptions"
+            },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 3.0029726028442383E+000
             }
           },
           {
@@ -84,12 +88,22 @@
           },
           {
             "$$ClassName" : "TCastleSpine",
-            "AutoAnimation" : "idle",
+            "AutoAnimation" : "flying",
             "ExposeTransforms" : [
             ],
             "Name" : "Spine1",
             "ProcessEvents" : true,
-            "URL" : "castle-data:/models/saratoga.json"
+            "ScalePersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 4.9999998882412910E-003,
+              "Y" : 4.9999998882412910E-003,
+              "Z" : 4.9999998882412910E-003
+            },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : -4.1817264556884766E+000
+            },
+            "URL" : "castle-data:/models/dragon.json"
           }
         ]
       },
