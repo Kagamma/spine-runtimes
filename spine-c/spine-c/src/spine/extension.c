@@ -139,11 +139,11 @@ float _spMath_pow2out_apply(float a) {
  * Functions that must be implemented:
  */
 
-// params: filePath, data, size
+/* params: filePath, data, size */
 void (*loader_load_file)(const char*, char**, int*) = NULL;
-// params: filePath, objPas, width, height
+/* params: filePath, objPas, width, height */
 void (*loader_load_texture)(const char*, void**, int*, int*) = NULL;
-// params: objPas
+/* params: objPas */
 void (*loader_free_texture)(void**) = NULL;
 
 void Spine_Loader_RegisterLoadRoutine(void* func) {
@@ -190,7 +190,7 @@ void _spAtlasPage_disposeTexture(spAtlasPage *self) {
 	}
 }
 
-// TODO: path is UTF-8?
+/* TODO: path is UTF-8? */
 char *_spUtil_readFile(const char *path, int *length) {
 	if (loader_load_file != NULL) {
 		char* data;

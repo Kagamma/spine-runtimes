@@ -111,7 +111,7 @@ const
 'void main() {'nl
 '  fragTexCoord = inTexCoord;'nl
 '  fragColor = inColor;'nl
-'  gl_Position = mvpMatrix * vec4(inVertex * 0.01, 0.0, 1.0);'nl
+'  gl_Position = mvpMatrix * vec4(inVertex, 0.0, 1.0);'nl
 '}';
 
   FragmentShaderSource: String =
@@ -393,95 +393,112 @@ var
     MeshAttachment: PspMeshAttachment;
     Slot: PspSlot;
     VertexCount: Cardinal;
+    PreviousImage: TDrawableImage = nil;
     Image: TDrawableImage;
+    PreviousBlendMode: Integer = -1;
     Color: TVector4;
     V: PCastleSpineVertex;
   begin
+    VertexCount := 0;
     for J := 0 to Skeleton^.slotsCount - 1 do
     begin
       Slot := Skeleton^.drawOrder[J];
       Attachment := Slot^.Attachment;
-      if Attachment = nil then continue;
-      // Blend mode
-      case Slot^.data^.blendMode of
-        SP_BLEND_MODE_ADDITIVE:
-          begin
-            glBlendFunc(GL_ONE, GL_ONE);
-          end;
-        else
-          begin
-            if Self.FspAtlas^.pages^.pma <> 0 then
-              glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
-            else
-              glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-          end;
-      end;
-      VertexCount := 0;
-      if Attachment^.type_ = SP_ATTACHMENT_REGION then
+      if Attachment <> nil then
       begin
-        RegionAttachment := PspRegionAttachment(Attachment);
-        Color := Vector4(
-          Skeleton^.color.r * Slot^.color.r * RegionAttachment^.color.r,
-          Skeleton^.color.g * Slot^.color.g * RegionAttachment^.color.g,
-          Skeleton^.color.b * Slot^.color.b * RegionAttachment^.color.b,
-          Skeleton^.color.a * Slot^.color.a * RegionAttachment^.color.a
-        );
-        Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
-        spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
-        // Create 2 triangles
-        AddVertex(WorldVerticesPositions[0], WorldVerticesPositions[1],
-            RegionAttachment^.uvs[0], 1 - RegionAttachment^.uvs[1],
-            Color, VertexCount);
-        AddVertex(WorldVerticesPositions[2], WorldVerticesPositions[3],
-            RegionAttachment^.uvs[2], 1 - RegionAttachment^.uvs[3],
-            Color, VertexCount);
-        AddVertex(WorldVerticesPositions[4], WorldVerticesPositions[5],
-            RegionAttachment^.uvs[4], 1 - RegionAttachment^.uvs[5],
-            Color, VertexCount);
-        AddVertex(WorldVerticesPositions[4], WorldVerticesPositions[5],
-            RegionAttachment^.uvs[4], 1 - RegionAttachment^.uvs[5],
-            Color, VertexCount);
-        AddVertex(WorldVerticesPositions[6], WorldVerticesPositions[7],
-            RegionAttachment^.uvs[6], 1 - RegionAttachment^.uvs[7],
-            Color, VertexCount);
-        AddVertex(WorldVerticesPositions[0], WorldVerticesPositions[1],
-            RegionAttachment^.uvs[0], 1 - RegionAttachment^.uvs[1],
-            Color, VertexCount);
-      end else
-      if Attachment^.type_ = SP_ATTACHMENT_MESH then
-      begin
-        MeshAttachment := PspMeshAttachment(Attachment);
-        if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
-        Color := Vector4(
-          Skeleton^.color.r * Slot^.color.r * MeshAttachment^.color.r,
-          Skeleton^.color.g * Slot^.color.g * MeshAttachment^.color.g,
-          Skeleton^.color.b * Slot^.color.b * MeshAttachment^.color.b,
-          Skeleton^.color.a * Slot^.color.a * MeshAttachment^.color.a
-        );
-        Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
-        spVertexAttachment_computeWorldVertices(@MeshAttachment^.super, Slot, 0, MeshAttachment^.Super.worldVerticesLength, @WorldVerticesPositions[0], 0, 2);
-        // Create mesh
-        for I := 0 to MeshAttachment^.trianglesCount - 1 do
+        // Blend mode
+        case Slot^.data^.blendMode of
+          SP_BLEND_MODE_ADDITIVE:
+            begin
+              glBlendFunc(GL_ONE, GL_ONE);
+            end;
+          else
+            begin
+              if Self.FspAtlas^.pages^.pma <> 0 then
+                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+              else
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            end;
+        end;
+        if Attachment^.type_ = SP_ATTACHMENT_REGION then
         begin
-          Indx := MeshAttachment^.triangles[I] shl 1;
-          AddVertex(WorldVerticesPositions[Indx], WorldVerticesPositions[Indx + 1],
-              MeshAttachment^.uvs[Indx], 1 - MeshAttachment^.uvs[Indx + 1],
+          RegionAttachment := PspRegionAttachment(Attachment);
+          Color := Vector4(
+            Skeleton^.color.r * Slot^.color.r * RegionAttachment^.color.r,
+            Skeleton^.color.g * Slot^.color.g * RegionAttachment^.color.g,
+            Skeleton^.color.b * Slot^.color.b * RegionAttachment^.color.b,
+            Skeleton^.color.a * Slot^.color.a * RegionAttachment^.color.a
+          );
+          Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
+          spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
+          // Create 2 triangles
+          AddVertex(WorldVerticesPositions[0], WorldVerticesPositions[1],
+              RegionAttachment^.uvs[0], 1 - RegionAttachment^.uvs[1],
               Color, VertexCount);
+          AddVertex(WorldVerticesPositions[2], WorldVerticesPositions[3],
+              RegionAttachment^.uvs[2], 1 - RegionAttachment^.uvs[3],
+              Color, VertexCount);
+          AddVertex(WorldVerticesPositions[4], WorldVerticesPositions[5],
+              RegionAttachment^.uvs[4], 1 - RegionAttachment^.uvs[5],
+              Color, VertexCount);
+          AddVertex(WorldVerticesPositions[4], WorldVerticesPositions[5],
+              RegionAttachment^.uvs[4], 1 - RegionAttachment^.uvs[5],
+              Color, VertexCount);
+          AddVertex(WorldVerticesPositions[6], WorldVerticesPositions[7],
+              RegionAttachment^.uvs[6], 1 - RegionAttachment^.uvs[7],
+              Color, VertexCount);
+          AddVertex(WorldVerticesPositions[0], WorldVerticesPositions[1],
+              RegionAttachment^.uvs[0], 1 - RegionAttachment^.uvs[1],
+              Color, VertexCount);
+        end else
+        if Attachment^.type_ = SP_ATTACHMENT_MESH then
+        begin
+          MeshAttachment := PspMeshAttachment(Attachment);
+          if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
+          Color := Vector4(
+            Skeleton^.color.r * Slot^.color.r * MeshAttachment^.color.r,
+            Skeleton^.color.g * Slot^.color.g * MeshAttachment^.color.g,
+            Skeleton^.color.b * Slot^.color.b * MeshAttachment^.color.b,
+            Skeleton^.color.a * Slot^.color.a * MeshAttachment^.color.a
+          );
+          Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
+          spVertexAttachment_computeWorldVertices(@MeshAttachment^.super, Slot, 0, MeshAttachment^.Super.worldVerticesLength, @WorldVerticesPositions[0], 0, 2);
+          // Create mesh
+          for I := 0 to MeshAttachment^.trianglesCount - 1 do
+          begin
+            Indx := MeshAttachment^.triangles[I] shl 1;
+            AddVertex(WorldVerticesPositions[Indx], WorldVerticesPositions[Indx + 1],
+                MeshAttachment^.uvs[Indx], 1 - MeshAttachment^.uvs[Indx + 1],
+                Color, VertexCount);
+          end;
+        end;
+        if J = 0 then
+        begin
+          PreviousImage := Image;
+          PreviousBlendMode := Integer(Slot^.data^.blendMode);
         end;
       end;
-      // Render result
-      glBindTexture(GL_TEXTURE_2D, Image.Texture);
+      if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) or
+        ((J = Skeleton^.slotsCount - 1) and (VertexCount > 0)) then
+      begin
+        // Render result
+        glBindTexture(GL_TEXTURE_2D, Image.Texture);
 
-      glBindBuffer(GL_ARRAY_BUFFER, VBO);
-      glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
-      glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-      glBindVertexArray(VAO);
-      glDrawArrays(GL_TRIANGLES, 0, VertexCount);
-      glBindVertexArray(0);
-
-      glBindTexture(GL_TEXTURE_2D, 0);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, VertexCount);
+        glBindVertexArray(0);
+        VertexCount := 0;
+        PreviousImage := Image;
+        PreviousBlendMode := Integer(Slot^.data^.blendMode);
+        Inc(Params.Statistics.ShapesVisible, 1);
+        Inc(Params.Statistics.ShapesRendered, 1);
+      end;
     end;
+    glBindTexture(GL_TEXTURE_2D, 0);
   end;
 
 begin
@@ -495,22 +512,19 @@ begin
   PreviousProgram := RenderContext.CurrentProgram;
   RenderProgram.Enable;
 
-  Inc(Params.Statistics.ShapesVisible, 1);
-  Inc(Params.Statistics.ShapesRendered, 1);
-
   RenderProgram.Uniform('mvpMatrix').SetValue(RenderContext.ProjectionMatrix * Params.RenderingCamera.Matrix * Params.Transform^);
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
-  glDepthMask(GL_TRUE);
+  glDepthMask(GL_FALSE);
   glActiveTexture(GL_TEXTURE0);
 
-  // TODO: Update world transform and render skeleton
   spSkeleton_updateWorldTransform(FspSkeleton);
   RenderSkeleton(Self.FspSkeleton);
 
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
 
   PreviousProgram.Enable;
 end;

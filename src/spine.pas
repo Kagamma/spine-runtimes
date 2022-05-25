@@ -20,7 +20,7 @@ uses
 type
   {$packenum 4}
   TspBlendMode = (
-	  SP_BLEND_MODE_NORMAL, SP_BLEND_MODE_ADDITIVE, SP_BLEND_MODE_MULTIPLY, SP_BLEND_MODE_SCREEN
+    SP_BLEND_MODE_NORMAL, SP_BLEND_MODE_ADDITIVE, SP_BLEND_MODE_MULTIPLY, SP_BLEND_MODE_SCREEN
   );
   TspAttachmentType = (
     SP_ATTACHMENT_REGION,
@@ -327,7 +327,7 @@ begin
   Result := AllocMem(Size);
 end;
 
-function SpReAlloc(var P: Pointer; Size: csize_t): Pointer; SPINECALL;
+function SpReAlloc(P: Pointer; Size: csize_t): Pointer; SPINECALL;
 begin
   Result := ReAllocMem(P, Size);
 end;

@@ -157,7 +157,7 @@ extern "C" {
  * Functions that must be implemented:
  */
 
-// Functions from CGE side
+/* Functions from CGE side */
 void Spine_Loader_RegisterLoadFileRoutine(void* func);
 void Spine_Loader_RegisterLoadTextureRoutine(void* func);
 void Spine_Loader_RegisterFreeTextureRoutine(void* func);
@@ -165,7 +165,7 @@ void Spine_MM_Malloc(void* func);
 void Spine_MM_ReAlloc(void* func);
 void Spine_MM_Free(void* func);
 
-// Functions from C side
+/* Functions from C side */
 void _spAtlasPage_createTexture(spAtlasPage *self, const char *path);
 void _spAtlasPage_disposeTexture(spAtlasPage *self);
 char *_spUtil_readFile(const char *path, int *length);
