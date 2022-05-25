@@ -148,9 +148,8 @@ begin
   try
     S := FileName;
     MS := Download(S, [soForceMemoryStream]) as TMemoryStream;
-    // Although Data is managed by spine-c, we already override spine-c memory manager so its safe to
-    // allocate memory using FPC
-    Data := AllocMem(Size);
+    // Data is managed by spine-c, so we call spine-c mem functions instead
+    Data := _spMalloc(Size, nil, 0);
     Size := MS.Size;
     // Copy data from MS to Data
     Move(MS.Memory^, Data^, Size);

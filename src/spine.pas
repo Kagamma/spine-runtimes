@@ -288,6 +288,7 @@ var
   Spine_MM_Malloc: procedure(Func: Pointer); SPINECALL;
   Spine_MM_ReAlloc: procedure(Func: Pointer); SPINECALL;
   Spine_MM_Free: procedure(Func: Pointer); SPINECALL;
+  _spMalloc: function(Size: csize_t; F: PChar; Line: cint): Pointer;
 
   // Atlas
   spAtlas_create: function(Data: Pointer; Len: cint; Dir: PChar; rendererObject: Pointer): PspAtlas; SPINECALL;
@@ -354,6 +355,7 @@ begin;
   Spine_MM_Malloc := GetProcedureAddress(Lib, 'Spine_MM_Malloc');
   Spine_MM_ReAlloc := GetProcedureAddress(Lib, 'Spine_MM_ReAlloc');
   Spine_MM_Free := GetProcedureAddress(Lib, 'Spine_MM_Free');
+  _spMalloc := GetProcedureAddress(Lib, '_spMalloc');
 
   // Atlas
   spAtlas_create := GetProcedureAddress(Lib, 'spAtlas_create');
@@ -383,9 +385,9 @@ begin;
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
   spVertexAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spVertexAttachment_computeWorldVertices');
 
-  Spine_MM_Malloc(@SpAlloc);
-  Spine_MM_ReAlloc(@SpReAlloc);
-  Spine_MM_Free(@SpFree);
+  //Spine_MM_Malloc(@SpAlloc);
+  //Spine_MM_ReAlloc(@SpReAlloc);
+  //Spine_MM_Free(@SpFree);
 
   Exit(True);
 end;
