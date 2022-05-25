@@ -1,26 +1,104 @@
 {
+  "$$ClassName" : "TCastleUserInterface",
   "FullSize" : true,
   "Name" : "Group1",
   "$Children" : [
     {
+      "$$ClassName" : "TCastleLabel",
       "ColorPersistent" : {
+        "$$ClassName" : "TCastleColorPersistent",
         "Green" : 1.0000000000000000E+000,
-        "Red" : 1.0000000000000000E+000,
-        "$ClassName" : "TCastleColorPersistent"
+        "Red" : 1.0000000000000000E+000
       },
       "FontSize" : 2.0000000000000000E+001,
       "HorizontalAnchorDelta" : -2.0000000000000000E+001,
       "HorizontalAnchorParent" : "hpRight",
       "HorizontalAnchorSelf" : "hpRight",
       "Name" : "LabelFps",
-      "Text" : "FPS: xxx\n",
+      "Text" : [
+        "FPS: xxx"
+      ],
       "VerticalAnchorDelta" : -2.0000000000000000E+001,
       "VerticalAnchorParent" : "vpTop",
       "VerticalAnchorSelf" : "vpTop",
+      "WordWrap" : false
+    },
+    {
+      "$$ClassName" : "TCastleViewport",
+      "Camera" : {
+        "$$ClassName" : "TCastleCamera",
+        "InitialDirectionPersistent" : {
+          "$$ClassName" : "TCastleVector3Persistent",
+          "X" : 2.8997147083282471E-001,
+          "Y" : -2.8136298060417175E-001,
+          "Z" : -9.1474115848541260E-001
+        },
+        "InitialPositionPersistent" : {
+          "$$ClassName" : "TCastleVector3Persistent",
+          "X" : -4.7521514892578125E+000,
+          "Y" : 4.0174574851989746E+000,
+          "Z" : 1.2018737792968750E+001
+        },
+        "InitialUpPersistent" : {
+          "$$ClassName" : "TCastleVector3Persistent",
+          "X" : 6.4338251948356628E-002,
+          "Y" : 9.5937597751617432E-001,
+          "Z" : -2.7469694614410400E-001
+        },
+        "Name" : "Camera",
+        "Orthographic" : {
+          "$$ClassName" : "TCastleOrthographic",
+          "Name" : "Orthographic"
+        },
+        "Perspective" : {
+          "$$ClassName" : "TCastlePerspective",
+          "Name" : "Perspective"
+        }
+      },
+      "FullSize" : true,
+      "Items" : {
+        "$$ClassName" : "TCastleRootTransform",
+        "Name" : "Items",
+        "PhysicsProperties" : {
+          "$$ClassName" : "TPhysicsProperties",
+          "Name" : "PhysicsProperties"
+        },
+        "$Children" : [
+          {
+            "$$ClassName" : "TCastleBox",
+            "Name" : "Box1",
+            "RenderOptions" : {
+              "$$ClassName" : "TCastleScene.TSceneRenderOptions",
+              "Name" : "RenderOptions"
+            }
+          },
+          {
+            "$$ClassName" : "TCastlePointLight",
+            "Name" : "PointLight1",
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : -3.1832542419433594E+000,
+              "Y" : 1.2840902805328369E+000,
+              "Z" : 4.0048260688781738E+000
+            }
+          },
+          {
+            "$$ClassName" : "TCastleSpine",
+            "ExposeTransforms" : [
+            ],
+            "Name" : "Spine1",
+            "URL" : "castle-data:/models/saratoga.json"
+          }
+        ]
+      },
+      "Name" : "Viewport1",
+      "Navigation" : "ExamineNavigation1",
       "$Children" : [
-      ],
-      "$ClassName" : "TCastleLabel"
+        {
+          "$$ClassName" : "TCastleExamineNavigation",
+          "Name" : "ExamineNavigation1"
+        }
+      ]
     }
-  ],
-  "$ClassName" : "TCastleUserInterface"
+  ]
 }

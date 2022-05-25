@@ -49,13 +49,16 @@ type
   strict private
     FURL: String;
     FIsGLContextInitialized: Boolean;
-    FSpAtlas: PspAtlas;
-    FSpSkeletonJson: PspSkeletonJson;
-    FSpSkeletonData: PspSkeletonData;
-    FSpAnimationStateData: PspAnimationStateData;
-    FSpSkeleton: PspSkeleton;
-    FSpAnimationState: PSpAnimationState;
+    FspAtlas: PspAtlas;
+    FspSkeletonJson: PspSkeletonJson;
+    FspSkeletonData: PspSkeletonData;
+    FspAnimationStateData: PspAnimationStateData;
+    FspSkeleton: PspSkeleton;
+    FspAnimationState: PspAnimationState;
+    FIsNeedRefresh: Boolean;
+    procedure Cleanup;
     procedure GLContextOpen;
+    procedure InternalLoadSpine;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -82,8 +85,9 @@ begin
   try
     S := FileName;
     MS := Download(S, [soForceMemoryStream]) as TMemoryStream;
-    // Data is managed by spine-c, so we call malloc
-    Data := _spMalloc(Size, nil, 0);
+    // Although Data is managed by spine-c, we already override spine-c memory manager so its safe to
+    // alloc in on CGE side
+    Data := AllocMem(Size);
     Size := MS.Size;
     // Copy data from MS to Data
     Move(MS.Memory^, Data^, Size);
@@ -122,9 +126,13 @@ begin
   if not ApplicationProperties.IsGLContextOpen then Exit;
   if Self.FIsGLContextInitialized then Exit;
   // TODO: Handle resources when OpenGL context is opened
-  Spine_Loader_RegisterLoadRoutine(@LoaderLoad);
-  Spine_Loader_RegisterLoadTextureRoutine(@LoaderLoadTexture);
-  Spine_Loader_RegisterFreeTextureRoutine(@LoaderFreeTexture);
+  if Spine_Load then
+  begin
+    Spine_Loader_RegisterLoadRoutine(@LoaderLoad);
+    Spine_Loader_RegisterLoadTextureRoutine(@LoaderLoadTexture);
+    Spine_Loader_RegisterFreeTextureRoutine(@LoaderFreeTexture);
+  end;
+  Self.FIsGLContextInitialized := True;
 end;
 
 procedure TCastleSpine.GLContextClose;
@@ -137,44 +145,24 @@ begin
   inherited;
 end;
 
-constructor TCastleSpine.Create(AOwner: TComponent);
-begin
-  inherited;
-end;
-
-destructor TCastleSpine.Destroy;
-begin
-  if Self.FSpAtlas <> nil then
-    spAtlas_dispose(Self.FSpAtlas);
-  if Self.FSpSkeletonJson <> nil then
-    spSkeletonJson_dispose(Self.FSpSkeletonJson);
-  if Self.FSpSkeletonData <> nil then
-    spSkeletonData_dispose(Self.FSpSkeletonData);
-  if Self.FSpAnimationStateData <> nil then
-    spAnimationStateData_dispose(Self.FSpAnimationStateData);
-  if Self.FSpSkeleton <> nil then
-    spSkeleton_dispose(Self.FSpSkeleton);
-  inherited;
-end;
-
-procedure TCastleSpine.LoadSpine(const AURL: String);
+procedure TCastleSpine.InternalLoadSpine;
 var
-  SpPath,
-  SpName,
+  Path: String;
   SkeletonFullPath,
   AtlasFullPath: String;
   MS: TMemoryStream;
   SS: TStringStream;
+  I: Integer;
 begin
-  SpPath := ExtractFilePath(AURL);
-  SpName := ExtractFileName(AURL);
+  Self.Cleanup;
 
-  SkeletonFullPath := AURL;
-  AtlasFullPath := SpPath + SpName + '.atlas';
+  Path := ExtractFilePath(Self.FURL);
+  SkeletonFullPath := Self.FURL;
+  AtlasFullPath := Path + StringReplace(ExtractFileName(Self.FURL), ExtractFileExt(Self.FURL), '', [rfReplaceAll]) + '.atlas';
 
   // Load atlas
   MS := Download(AtlasFullPath, [soForceMemoryStream]) as TMemoryStream;
-  Self.FSpAtlas := spAtlas_create(MS.Memory, MS.Size, nil, nil);
+  Self.FspAtlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path + #0), nil);
   MS.Free;
 
   // Load skeleton data
@@ -182,30 +170,68 @@ begin
   SS := TStringStream.Create('');
   try
     SS.CopyFrom(MS, MS.Size);
-    Self.FSpSkeletonJson := spSkeletonJson_create(Self.FSpAtlas);
-    Self.FSpSkeletonData := spSkeletonJson_readSkeletonData(Self.FSpSkeletonJson, PChar(SS.DataString + #0));
+    Self.FspSkeletonJson := spSkeletonJson_create(Self.FspAtlas);
+    Self.FspSkeletonData := spSkeletonJson_readSkeletonData(Self.FspSkeletonJson, PChar(SS.DataString + #0));
   finally
     SS.Free;
   end;
   MS.Free;
 
   // Prepare animation state data
-  Self.FSpAnimationStateData := spAnimationStateData_create(Self.FSpSkeletonData);
+  Self.FspAnimationStateData := spAnimationStateData_create(Self.FspSkeletonData);
+  Self.FspAnimationState := spAnimationState_create(Self.FspAnimationStateData);
 
   // Create skeleton
-  Self.FSpSkeleton := spSkeleton_create(Self.FSpSkeletonData);
+  Self.FspSkeleton := spSkeleton_create(Self.FspSkeletonData);
+
+  Self.FIsNeedRefresh := False;
+end;
+
+procedure TCastleSpine.Cleanup;
+begin
+  if Self.FspAtlas <> nil then
+    spAtlas_dispose(Self.FspAtlas);
+  if Self.FspSkeletonJson <> nil then
+    spSkeletonJson_dispose(Self.FspSkeletonJson);
+  if Self.FspSkeletonData <> nil then
+    spSkeletonData_dispose(Self.FspSkeletonData);
+  if Self.FspAnimationStateData <> nil then
+    spAnimationStateData_dispose(Self.FspAnimationStateData);
+  if Self.FspSkeleton <> nil then
+    spSkeleton_dispose(Self.FspSkeleton);
+end;
+
+constructor TCastleSpine.Create(AOwner: TComponent);
+begin
+  inherited;
+end;
+
+destructor TCastleSpine.Destroy;
+begin
+  Self.Cleanup;
+  inherited;
+end;
+
+procedure TCastleSpine.LoadSpine(const AURL: String);
+begin
+  Self.FURL := AURL;
+  Self.FIsNeedRefresh := True;
 end;
 
 procedure TCastleSpine.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
 begin
   inherited;
   Self.GLContextOpen;
+
+  if Self.FIsNeedRefresh then
+    Self.InternalLoadSpine;
+
   RemoveMe := rtNone;
   // TODO: Update
-  if Self.FSpAnimationState <> nil then
+  if Self.FIsGLContextInitialized and (Self.FspAnimationState <> nil) then
   begin
-    spAnimationState_update(Self.FSpAnimationState, SecondsPassed);
-    spAnimationState_apply(Self.FSpAnimationState, Self.FSpSkeleton);
+    spAnimationState_update(Self.FspAnimationState, SecondsPassed);
+    spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
   end;
 end;
 
@@ -228,8 +254,8 @@ var
   var
     I, J, Indx: Integer;
     Attachment: PspAttachment;
-    RegionAttachment: PSpRegionAttachment;
-    MeshAttachment: PSpMeshAttachment;
+    RegionAttachment: PspRegionAttachment;
+    MeshAttachment: PspMeshAttachment;
     Slot: PspSlot;
     VertexCount: Cardinal;
     Image: TDrawableImage;
@@ -249,7 +275,7 @@ var
           end;
         else
           begin
-            if Self.FSpAtlas^.pages^.pma <> 0 then
+            if Self.FspAtlas^.pages^.pma <> 0 then
               glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
             else
               glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -258,7 +284,7 @@ var
       VertexCount := 0;
       if Attachment^.type_ = SP_ATTACHMENT_REGION then
       begin
-        RegionAttachment := PSpRegionAttachment(Attachment);
+        RegionAttachment := PspRegionAttachment(Attachment);
         Color := Vector4(
           Skeleton^.color.r * Slot^.color.r * RegionAttachment^.color.r,
           Skeleton^.color.g * Slot^.color.g * RegionAttachment^.color.g,
@@ -317,7 +343,7 @@ var
           V := @SpineVertices[I];
           glColor4f(V^.Color.X, V^.Color.Y, V^.Color.Z, V^.Color.W);
           glTexCoord2f(V^.TexCoord.X, V^.TexCoord.Y);
-          glVertex2f(V^.Vertex.X, V^.Vertex.Y);
+          glVertex2f(V^.Vertex.X * 0.001, V^.Vertex.Y * 0.001);
         end;
       glEnd();
     end;
@@ -325,16 +351,23 @@ var
 
 begin
   inherited;
+  if Self.FspAnimationState = nil then
+    Exit;
   if not Self.FIsGLContextInitialized then
     Exit;
+  if (not Self.Visible) or Params.InShadow or (not Params.Transparent) or (Params.StencilTest > 0) then
+    Exit;
   PreviousProgram := RenderContext.CurrentProgram;
+
+  Inc(Params.Statistics.ShapesVisible, 1);
+  Inc(Params.Statistics.ShapesRendered, 1);
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glDepthMask(GL_TRUE);
   // TODO: Update world transform and render skeleton
-  spAnimationState_updateWorldTransform(FSpSkeleton);
-  RenderSkeleton(Self.FSpSkeleton);
+  spSkeleton_updateWorldTransform(FspSkeleton);
+  RenderSkeleton(Self.FspSkeleton);
 
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);

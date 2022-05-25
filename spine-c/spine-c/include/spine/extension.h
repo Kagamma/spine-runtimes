@@ -163,11 +163,16 @@ typedef void (*loader_load_file_t)(const char*, char**, int*);
 typedef void (*loader_load_texture_t)(const char*, void**, int*, int*);
 // params: objPas
 typedef void (*loader_free_texture_t)(void**);
+// params: objPas
+typedef void (*loader_free_texture_t)(void**);
 
 // Functions from CGE side
 void Spine_Loader_RegisterLoadFileRoutine(loader_load_file_t func);
 void Spine_Loader_RegisterLoadTextureRoutine(loader_load_texture_t func);
 void Spine_Loader_RegisterFreeTextureRoutine(loader_free_texture_t func);
+void Spine_MM_Malloc(void* func);
+void Spine_MM_ReAlloc(void* func);
+void Spine_MM_Free(void* func);
 
 // Functions from C side
 void _spAtlasPage_createTexture(spAtlasPage *self, const char *path);

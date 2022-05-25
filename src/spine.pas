@@ -63,13 +63,19 @@ type
 
   PspKeyValueArray = Pointer;
 
-  PspSkeletonJson = Pointer;
+  PspAttachmentLoader = Pointer;
+
+  PspSkeletonJson = ^TspSkeletonJson;
+  TspSkeletonJson = record
+    scale: cfloat;
+    attachmentLoader: PspAttachmentLoader;
+    error: PChar;
+  end;
+
   PspSkeletonData = Pointer;
   PspAnimationStateData = Pointer;
-  PSpAnimationState = Pointer;
+  PspAnimationState = Pointer;
   PspBoneData = Pointer;
-
-  PspAttachmentLoader = Pointer;
 
   TspAttachment = record
     name: Pchar;
@@ -168,7 +174,7 @@ type
   PspSlot = ^TspSlot;
   PPspSlot = ^PspSlot;
 
-  PSpSkeleton = ^TSpSkeleton;
+  PspSkeleton = ^TSpSkeleton;
   TspSkeleton = record
     data: PspSkeletonData;
 
@@ -235,32 +241,35 @@ var
   Spine_Loader_RegisterFreeTextureRoutine: procedure(Func: Pointer); SPINECALL;
 
   // Memory management
-  _spMalloc: function(Size: Cardinal; F: PChar; L: Integer): Pointer; SPINECALL;
+  Spine_MM_Malloc: procedure(Func: Pointer); SPINECALL;
+  Spine_MM_ReAlloc: procedure(Func: Pointer); SPINECALL;
+  Spine_MM_Free: procedure(Func: Pointer); SPINECALL;
 
   // Atlas
   spAtlas_create: function(Data: Pointer; Len: cint; Dir: PChar; rendererObject: Pointer): PspAtlas; SPINECALL;
   spAtlas_dispose: procedure(Atlas: PspAtlas); SPINECALL;
 
   // Skeleton
-  spSkeletonJson_create: function(Atlas: PspAtlas): PspSkeleton; SPINECALL;
+  spSkeletonJson_create: function(Atlas: PspAtlas): PspSkeletonJson; SPINECALL;
   spSkeletonJson_readSkeletonData: function(SkeletonJson: PspSkeletonJson; Data: PChar): PspSkeletonData; SPINECALL;
   spSkeletonJson_dispose: procedure(SkeletonJson: PspSkeletonJson); SPINECALL;
   spSkeleton_create: function(SkeletonData: PspSkeletonData): PspSkeleton; SPINECALL;
   spSkeleton_dispose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeletonData_dispose: procedure(SkeletonData: PspSkeletonData); SPINECALL;
+  spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
 
   // Animation
   spAnimationStateData_create: function(SkeletonData: PspSkeletonData): PspAnimationStateData; SPINECALL;
   spAnimationStateData_dispose: procedure(AnimationStateData: PspAnimationStateData); SPINECALL;
   spAnimationStateData_setMixByName: procedure(AnimationStateData: PspAnimationStateData; FromName, ToName: PChar; Duration: cfloat); SPINECALL;
-  spAnimationState_setAnimationByName: procedure(AnimationState: PSpAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cint); SPINECALL;
-  spAnimationState_update: procedure(AnimationState: PSpAnimationState; Delta: cfloat); SPINECALL;
-  spAnimationState_apply: procedure(AnimationState: PSpAnimationState; Skeleton: PspSkeleton); SPINECALL;
-  spAnimationState_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
+  spAnimationState_setAnimationByName: procedure(AnimationState: PspAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cint); SPINECALL;
+  spAnimationState_update: procedure(AnimationState: PspAnimationState; Delta: cfloat); SPINECALL;
+  spAnimationState_apply: procedure(AnimationState: PspAnimationState; Skeleton: PspSkeleton); SPINECALL;
+  spAnimationState_create: function(Data: PspAnimationStateData): PspAnimationState; SPINECALL;
 
   // Attachment
-  spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PSpBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
-  spVertexAttachment_computeWorldVertices: procedure(This: PspVertexAttachment; Slot: PSpSlot; Start, Count: cint; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
+  spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PspBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
+  spVertexAttachment_computeWorldVertices: procedure(This: PspVertexAttachment; Slot: PspSlot; Start, Count: cint; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
 
 function Spine_Load: Boolean;
 
@@ -268,6 +277,21 @@ implementation
 
 var
   Lib: TLibHandle = dynlibs.NilHandle;
+
+function SpAlloc(Size: csize_t): Pointer; SPINECALL;
+begin
+  Result := AllocMem(Size);
+end;
+
+function SpReAlloc(var P: Pointer; Size: csize_t): Pointer; SPINECALL;
+begin
+  Result := ReAllocMem(P, Size);
+end;
+
+procedure SpFree(P: Pointer); SPINECALL;
+begin
+  FreeMem(P);
+end;
 
 function Spine_Load: Boolean;
 begin;
@@ -282,7 +306,9 @@ begin;
   Spine_Loader_RegisterFreeTextureRoutine := GetProcedureAddress(Lib, 'Spine_Loader_RegisterFreeTextureRoutine');
 
   // Memory management
-  _spMalloc := GetProcedureAddress(Lib, '_spMalloc');
+  Spine_MM_Malloc := GetProcedureAddress(Lib, 'Spine_MM_Malloc');
+  Spine_MM_ReAlloc := GetProcedureAddress(Lib, 'Spine_MM_ReAlloc');
+  Spine_MM_Free := GetProcedureAddress(Lib, 'Spine_MM_Free');
 
   // Atlas
   spAtlas_create := GetProcedureAddress(Lib, 'spAtlas_create');
@@ -295,6 +321,7 @@ begin;
   spSkeleton_create := GetProcedureAddress(Lib, 'spSkeleton_create');
   spSkeleton_dispose := GetProcedureAddress(Lib, 'spSkeleton_dispose');
   spSkeletonData_dispose := GetProcedureAddress(Lib, 'spSkeletonData_dispose');
+  spSkeleton_updateWorldTransform := GetProcedureAddress(Lib, 'spSkeleton_updateWorldTransform');
 
   // Animation
   spAnimationStateData_create := GetProcedureAddress(Lib, 'spAnimationStateData_create');
@@ -303,11 +330,16 @@ begin;
   spAnimationState_setAnimationByName := GetProcedureAddress(Lib, 'spAnimationState_setAnimationByName');
   spAnimationState_update := GetProcedureAddress(Lib, 'spAnimationState_update');
   spAnimationState_apply := GetProcedureAddress(Lib, 'spAnimationState_apply');
-  spAnimationState_updateWorldTransform := GetProcedureAddress(Lib, 'spAnimationState_updateWorldTransform');
+  spAnimationState_create := GetProcedureAddress(Lib, 'spAnimationState_create');
+
 
   // Attachment
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
   spVertexAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spVertexAttachment_computeWorldVertices');
+
+  Spine_MM_Malloc(@SpAlloc);
+  Spine_MM_ReAlloc(@SpReAlloc);
+  Spine_MM_Free(@SpFree);
 
   Exit(True);
 end;

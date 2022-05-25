@@ -34,15 +34,15 @@ float _spInternalRandom() {
 	return rand() / (float) RAND_MAX;
 }
 
-static void *(*mallocFunc)(size_t size) = malloc;
+void *(*mallocFunc)(size_t size) = malloc;
 
-static void *(*reallocFunc)(void *ptr, size_t size) = realloc;
+void *(*reallocFunc)(void *ptr, size_t size) = realloc;
 
-static void *(*debugMallocFunc)(size_t size, const char *file, int line) = NULL;
+void *(*debugMallocFunc)(size_t size, const char *file, int line) = NULL;
 
-static void (*freeFunc)(void *ptr) = free;
+void (*freeFunc)(void *ptr) = free;
 
-static float (*randomFunc)() = _spInternalRandom;
+float (*randomFunc)() = _spInternalRandom;
 
 void *_spMalloc(size_t size, const char *file, int line) {
 	if (debugMallocFunc)
@@ -155,11 +155,23 @@ void Spine_Loader_RegisterFreeTextureRoutine(loader_free_texture_t func) {
 	loader_free_texture = func;
 }
 
+void Spine_MM_Malloc(void* func) {
+	mallocFunc = func;
+}
+
+void Spine_MM_ReAlloc(void* func) {
+	reallocFunc = func;
+}
+
+void Spine_MM_Free(void* func) {
+	freeFunc = func;
+}
+
 void _spAtlasPage_createTexture(spAtlasPage *self, const char *path) {
 	if (loader_load_texture != NULL) {
-	  void* texture;
+		void* texture;
 		int width, height;
-		loader_load_texture(path, texture, &width, &height);
+		loader_load_texture(path, &texture, &width, &height);
 		self->rendererObject = texture;
 		self->width = width;
 		self->height = height;
@@ -178,7 +190,7 @@ char *_spUtil_readFile(const char *path, int *length) {
 	if (loader_load_file != NULL) {
 		char* data;
 		int len;
-    loader_load_file(path, &data, &len);
+   		loader_load_file(path, &data, &len);
 		return data;
 	} else {
 		return NULL;

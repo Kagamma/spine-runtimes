@@ -4,6 +4,7 @@
   game_units="GameInitialize"
   qualified_name="com.mycompany.TestSpineC"
   caption="TestSpineC"
+  editor_units="CastleSpine"
 >
   <compiler_options>
     <search_paths>
