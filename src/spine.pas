@@ -18,6 +18,7 @@ uses
   ctypes, dynlibs;
 
 type
+  {$packenum 4}
   TspBlendMode = (
 	  SP_BLEND_MODE_NORMAL, SP_BLEND_MODE_ADDITIVE, SP_BLEND_MODE_MULTIPLY, SP_BLEND_MODE_SCREEN
   );
@@ -55,6 +56,7 @@ type
     SP_ATLAS_CLAMPTOEDGE,
     SP_ATLAS_REPEAT
   );
+  {$packenum 1}
 
   TspColor = record
     r, g, b, a: cfloat;
@@ -72,10 +74,66 @@ type
     error: PChar;
   end;
 
-  PspSkeletonData = Pointer;
+  PspBoneData = Pointer;
+  PspSkin = Pointer;
+  PspEventData = Pointer;
+  PspTimelineArray = Pointer;
+  PspPropertyIdArray = Pointer;
+
+  PspAnimation = ^TspAnimation;
+  TspAnimation = record
+    name: PChar;
+    duration: cfloat;
+    timelines: PspTimelineArray;
+    timelineIds: PspPropertyIdArray;
+  end;
+
+  PspIkConstraintData = Pointer;
+  PspTransformConstraintData = Pointer;
+  PspPathConstraintData = Pointer;
+
+  TspSlotData = record
+    index_: cint;
+    name: PChar;
+    boneData: PspBoneData;
+    attachmentName: PChar;
+    color: TspColor;
+    darkColor: PspColor;
+    blendMode: TspBlendMode;
+  end;
+  PspSlotData = ^TspSlotData;
+
+  PspSkeletonData = ^TspSkeletonData;
+  TspSkeletonData = record
+    version: PChar;
+    hash: PChar;
+    x, y, width, height: cfloat;
+    fps: cfloat;
+    imagesPath: PChar;
+    audioPath: PChar;
+    stringsCount: cint;
+    strings: ^PChar;
+    bonesCount: cint;
+    bones: ^PspBoneData;
+    slotsCount: cint;
+    slots: ^PspSlotData;
+    skinsCount: cint;
+    skins: ^PspSkin;
+    defaultSkin: PspSkin;
+    eventsCount: cint;
+    events: ^PspEventData;
+    animationsCount: cint;
+    animations: ^PspAnimation;
+    ikConstraintsCount: cint;
+    ikConstraints: ^PspIkConstraintData;
+    transformConstraintsCount: cint;
+    transformConstraints: ^PspTransformConstraintData;
+    pathConstraintsCount: cint;
+    pathConstraints: ^PspPathConstraintData;
+  end;
+
   PspAnimationStateData = Pointer;
   PspAnimationState = Pointer;
-  PspBoneData = Pointer;
 
   TspAttachment = record
     name: Pchar;
@@ -148,20 +206,6 @@ type
 
   PspPathConstraint = Pointer;
   PPspPathConstraint = ^PspPathConstraint;
-
-  PspSkin = Pointer;
-  PPspSkin = ^PspSkin;
-
-  TspSlotData = record
-    index_: cint;
-    name: PChar;
-    boneData: PspBoneData;
-    attachmentName: PChar;
-    color: TspColor;
-    darkColor: PspColor;
-    blendMode: TspBlendMode;
-  end;
-  PspSlotData = ^TspSlotData;
 
   TspSlot = record
     data: PspSlotData;
@@ -262,7 +306,7 @@ var
   spAnimationStateData_create: function(SkeletonData: PspSkeletonData): PspAnimationStateData; SPINECALL;
   spAnimationStateData_dispose: procedure(AnimationStateData: PspAnimationStateData); SPINECALL;
   spAnimationStateData_setMixByName: procedure(AnimationStateData: PspAnimationStateData; FromName, ToName: PChar; Duration: cfloat); SPINECALL;
-  spAnimationState_setAnimationByName: procedure(AnimationState: PspAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cint); SPINECALL;
+  spAnimationState_setAnimationByName: procedure(AnimationState: PspAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cbool); SPINECALL;
   spAnimationState_update: procedure(AnimationState: PspAnimationState; Delta: cfloat); SPINECALL;
   spAnimationState_apply: procedure(AnimationState: PspAnimationState; Skeleton: PspSkeleton); SPINECALL;
   spAnimationState_create: function(Data: PspAnimationStateData): PspAnimationState; SPINECALL;

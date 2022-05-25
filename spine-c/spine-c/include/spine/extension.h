@@ -157,19 +157,10 @@ extern "C" {
  * Functions that must be implemented:
  */
 
-// params: filePath, data, size
-typedef void (*loader_load_file_t)(const char*, char**, int*);
-// params: filePath, objPas, width, height
-typedef void (*loader_load_texture_t)(const char*, void**, int*, int*);
-// params: objPas
-typedef void (*loader_free_texture_t)(void**);
-// params: objPas
-typedef void (*loader_free_texture_t)(void**);
-
 // Functions from CGE side
-void Spine_Loader_RegisterLoadFileRoutine(loader_load_file_t func);
-void Spine_Loader_RegisterLoadTextureRoutine(loader_load_texture_t func);
-void Spine_Loader_RegisterFreeTextureRoutine(loader_free_texture_t func);
+void Spine_Loader_RegisterLoadFileRoutine(void* func);
+void Spine_Loader_RegisterLoadTextureRoutine(void* func);
+void Spine_Loader_RegisterFreeTextureRoutine(void* func);
 void Spine_MM_Malloc(void* func);
 void Spine_MM_ReAlloc(void* func);
 void Spine_MM_Free(void* func);

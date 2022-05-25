@@ -139,19 +139,22 @@ float _spMath_pow2out_apply(float a) {
  * Functions that must be implemented:
  */
 
-loader_load_file_t loader_load_file = NULL;
-loader_load_texture_t loader_load_texture = NULL;
-loader_free_texture_t loader_free_texture = NULL;
+// params: filePath, data, size
+void (*loader_load_file)(const char*, char**, int*) = NULL;
+// params: filePath, objPas, width, height
+void (*loader_load_texture)(const char*, void**, int*, int*) = NULL;
+// params: objPas
+void (*loader_free_texture)(void**) = NULL;
 
-void Spine_Loader_RegisterLoadRoutine(loader_load_file_t func) {
+void Spine_Loader_RegisterLoadRoutine(void* func) {
 	loader_load_file = func;
 }
 
-void Spine_Loader_RegisterLoadTextureRoutine(loader_load_texture_t func) {
+void Spine_Loader_RegisterLoadTextureRoutine(void* func) {
 	loader_load_texture = func;
 }
 
-void Spine_Loader_RegisterFreeTextureRoutine(loader_free_texture_t func) {
+void Spine_Loader_RegisterFreeTextureRoutine(void* func) {
 	loader_free_texture = func;
 }
 
@@ -172,6 +175,7 @@ void _spAtlasPage_createTexture(spAtlasPage *self, const char *path) {
 		void* texture;
 		int width, height;
 		loader_load_texture(path, &texture, &width, &height);
+		if (!texture) return;
 		self->rendererObject = texture;
 		self->width = width;
 		self->height = height;
@@ -181,6 +185,7 @@ void _spAtlasPage_createTexture(spAtlasPage *self, const char *path) {
 void _spAtlasPage_disposeTexture(spAtlasPage *self) {
 	if (loader_free_texture != NULL) {
 		void* texture = self->rendererObject;
+		if (!texture) return;
 		loader_free_texture(texture);
 	}
 }
