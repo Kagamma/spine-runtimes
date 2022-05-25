@@ -412,6 +412,26 @@ var
     PreviousBlendMode: Integer = -1;
     Color: TVector4;
     V: PCastleSpineVertex;
+
+    procedure Render; inline;
+    begin
+      // Render result
+      glBindTexture(GL_TEXTURE_2D, Image.Texture);
+
+      glBindBuffer(GL_ARRAY_BUFFER, VBO);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+      glBindVertexArray(VAO);
+      glDrawArrays(GL_TRIANGLES, 0, VertexCount);
+      glBindVertexArray(0);
+      VertexCount := 0;
+      PreviousImage := Image;
+      PreviousBlendMode := Integer(Slot^.data^.blendMode);
+      Inc(Params.Statistics.ShapesVisible, 1);
+      Inc(Params.Statistics.ShapesRendered, 1);
+    end;
+
   begin
     VertexCount := 0;
     for J := 0 to Skeleton^.slotsCount - 1 do
@@ -421,18 +441,22 @@ var
       if Attachment <> nil then
       begin
         // Blend mode
-        case Slot^.data^.blendMode of
-          SP_BLEND_MODE_ADDITIVE:
-            begin
+        if Self.FspAtlas^.pages^.pma <> 0 then
+        begin
+          case Slot^.data^.blendMode of
+            SP_BLEND_MODE_ADDITIVE:
               glBlendFunc(GL_ONE, GL_ONE);
-            end;
-          else
-            begin
-              if Self.FspAtlas^.pages^.pma <> 0 then
-                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
-              else
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            end;
+            else
+              glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+          end;
+        end else
+        begin
+          case Slot^.data^.blendMode of
+            SP_BLEND_MODE_ADDITIVE:
+              glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            else
+              glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+          end;
         end;
         if Attachment^.type_ = SP_ATTACHMENT_REGION then
         begin
@@ -491,27 +515,13 @@ var
           PreviousImage := Image;
           PreviousBlendMode := Integer(Slot^.data^.blendMode);
         end;
-      end;
-      if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) or
-        ((J = Skeleton^.slotsCount - 1) and (VertexCount > 0)) then
-      begin
-        // Render result
-        glBindTexture(GL_TEXTURE_2D, Image.Texture);
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, VertexCount);
-        glBindVertexArray(0);
-        VertexCount := 0;
-        PreviousImage := Image;
-        PreviousBlendMode := Integer(Slot^.data^.blendMode);
-        Inc(Params.Statistics.ShapesVisible, 1);
-        Inc(Params.Statistics.ShapesRendered, 1);
+        if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
+          // Render result
+          Render;
       end;
     end;
+    if VertexCount > 0 then
+      Render;
     glBindTexture(GL_TEXTURE_2D, 0);
   end;
 
