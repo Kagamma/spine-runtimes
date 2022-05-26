@@ -81,6 +81,8 @@ type
     FAutoAnimation: String;
     FAutoAnimationLoop: Boolean;
     FSpineData: PCastleSpineData;
+    FSecondsPassedAcc: Single;
+    FTicks: Integer;
     procedure Cleanup;
     procedure GLContextOpen;
     procedure InternalLoadSpine;
@@ -404,14 +406,18 @@ begin
       F := SecondsPassed * Self.TimePlayingSpeed
     else
       F := SecondsPassed;
+    Inc(Self.FTicks);
+    Self.FSecondsPassedAcc := Self.FSecondsPassedAcc + F;
     if Self.FIsAnimationPlaying and Self.ProcessEvents then
     begin
-      if (Self.AnimateOnlyWhenVisible and Self.Visible) or (not Self.AnimateOnlyWhenVisible) then
+      if (Self.FTicks > Self.AnimateSkipTicks) and ((Self.AnimateOnlyWhenVisible and Self.Visible) or (not Self.AnimateOnlyWhenVisible)) then
       begin
-        spAnimationState_update(Self.FspAnimationState, F);
+        spAnimationState_update(Self.FspAnimationState, Self.FSecondsPassedAcc);
         spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
         spSkeleton_updateWorldTransform(Self.FspSkeleton);
         spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
+        Self.FTicks := 0;
+        Self.FSecondsPassedAcc := 0;
       end;
     end;
   end;
