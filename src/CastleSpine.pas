@@ -606,14 +606,28 @@ begin
 end;
 
 procedure TCastleSpine.InternalPlayAnimation;
+
+  function IsAnimationExists: Boolean;
+  var
+    I: Integer;
+  begin
+    for I := 0 to Self.FspSkeletonData^.animationsCount - 1 do
+      if Self.FspSkeletonData^.animations[I]^.Name = Self.FParameters.Name then
+        Exit(True);
+    Exit(False);
+  end;
+
 begin
   if Self.FspAnimationState = nil then Exit;
-  if (Self.FPreviousAnimation <> '') and (Self.FPreviousAnimation <> Self.FParameters.Name) then
+  if IsAnimationExists then
   begin
-    spAnimationStateData_setMixByName(Self.FspAnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
+    if (Self.FPreviousAnimation <> '') and (Self.FPreviousAnimation <> Self.FParameters.Name) then
+    begin
+      spAnimationStateData_setMixByName(Self.FspAnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
+    end;
+    spAnimationState_setAnimationByName(Self.FspAnimationState, 0, PChar(Self.FParameters.Name), Self.FParameters.Loop);
+    Self.FPreviousAnimation := Self.FParameters.Name;
   end;
-  spAnimationState_setAnimationByName(Self.FspAnimationState, 0, PChar(Self.FParameters.Name), Self.FParameters.Loop);
-  Self.FPreviousAnimation := Self.FParameters.Name;
   Self.FIsNeedRefreshAnimation := False;
 end;
 
