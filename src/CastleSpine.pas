@@ -29,7 +29,7 @@ unit CastleSpine;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections, fpjsonrtti, Spine,
+  Classes, SysUtils, Generics.Collections, fpjsonrtti, Spine, strutils,
   {$ifdef GLES}
   CastleGLES,
   {$else}
@@ -240,7 +240,7 @@ end;
 
 function ValidName(const S: String): String;
 begin
-  Result := StringReplace(S, ' ', '_', [rfReplaceAll]);
+  Result := StringsReplace(S, [' ', '-'], ['_', '_'], [rfReplaceAll]);
 end;
 
 { ----- TCastleSpineTransformBehavior ----- }
