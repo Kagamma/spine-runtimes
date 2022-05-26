@@ -348,6 +348,9 @@ begin
   for I := 0 to SpineData^.SkeletonData^.animationsCount - 1 do
   begin
     Self.AnimationsList.Add(SpineData^.SkeletonData^.animations[I]^.name);
+    // Auto play animation
+    if SpineData^.SkeletonData^.animations[I]^.name = Self.FAutoAnimation then
+      Self.AutoAnimation := Self.AutoAnimation;
   end;
 
   // Expose transform list
