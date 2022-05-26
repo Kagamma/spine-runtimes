@@ -40,7 +40,7 @@ uses
   {$endif}
   CastleVectors, CastleSceneCore, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
-  CastleGLImages, X3DNodes, CastleColors;
+  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils;
 
 type
   PCastleSpineVertex = ^TCastleSpineVertex;
@@ -88,6 +88,7 @@ type
     FTicks: Integer;
     FSmoothTexture: Boolean;
     FColor: TVector4;
+    FExposeBones: TStrings;
     FColorPersistent: TCastleColorPersistent;
     procedure Cleanup;
     procedure GLContextOpen;
@@ -96,10 +97,14 @@ type
     procedure SetAutoAnimation(S: String);
     procedure SetAutoAnimationLoop(V: Boolean);
     procedure SetColorForPersistent(const AValue: TVector4);
+    procedure SetExposeBones(const Value: TStrings);
     function GetColorForPersistent: TVector4;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    {$ifdef CASTLE_DESIGN_MODE}
+    function PropertySections(const PropertyName: String): TPropertySections; override;
+    {$endif}
     procedure LoadSpine(const AURL: String);
     procedure GLContextClose; override;
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
@@ -117,6 +122,7 @@ type
     property ColorPersistent: TCastleColorPersistent read FColorPersistent;
     property SmoothTexture: Boolean read FSmoothTexture write FSmoothTexture default True;
     property DistanceCulling: Single read FDistanceCulling write FDistanceCulling default 0;
+    property ExposeBones: TStrings read FExposeBones write SetExposeBones;
   end;
 
 implementation
@@ -300,8 +306,9 @@ begin
     Exit;
   end;
 
-  if CastleDesignMode then
-    SpineDataCache.Clear; // We don't cache spine data in castle-editor
+  {$ifdef CASTLE_DESIGN_MODE}
+  SpineDataCache.Clear; // We don't cache spine data in castle-editor
+  {$endif}
 
   if not SpineDataCache.ContainsKey(Self.FURL) then
   begin
@@ -356,11 +363,11 @@ begin
       Self.AutoAnimation := Self.AutoAnimation;
   end;
 
-  // Expose transform list
-  Self.ExposeTransforms.Clear;
+  // Expose bone list
+  Self.ExposeBones.Clear;
   for I := 0 to SpineData^.SkeletonData^.bonesCount - 1 do
   begin
-    Self.ExposeTransforms.Add(SpineData^.SkeletonData^.bones[I]^.name);
+    Self.ExposeBones.Add(SpineData^.SkeletonData^.bones[I]^.name);
   end;
 
   Self.FIsNeedRefresh := False;
@@ -404,6 +411,12 @@ begin
   Self.FColor := AValue;
 end;
 
+
+procedure TCastleSpine.SetExposeBones(const Value: TStrings);
+begin
+  Self.FExposeBones.Assign(Value);
+end;
+
 function TCastleSpine.GetColorForPersistent: TVector4;
 begin
   Result := Self.FColor;
@@ -416,6 +429,7 @@ begin
   Self.FSmoothTexture := True;
   Self.FParameters := TPlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
+  Self.FExposeBones := TStringList.Create;
   Self.FColorPersistent := CreateColorPersistent(
     @Self.GetColorForPersistent,
     @Self.SetColorForPersistent,
@@ -428,8 +442,23 @@ begin
   Self.Cleanup;
   Self.FParameters.Free;
   Self.FColorPersistent.Free;
+  Self.FExposeBones.Free;
   inherited;
 end;
+
+{$ifdef CASTLE_DESIGN_MODE}
+function TCastleSpine.PropertySections(
+  const PropertyName: String): TPropertySections;
+begin
+  if (PropertyName = 'ExposeBones') then
+    Result := [psBasic]
+  else
+  if (PropertyName = 'ExposeTransforms') then
+    Result := []
+  else
+    Result := inherited PropertySections(PropertyName);
+end;
+{$endif}
 
 procedure TCastleSpine.LoadSpine(const AURL: String);
 begin
