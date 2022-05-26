@@ -40,7 +40,7 @@ uses
   {$endif}
   CastleVectors, CastleSceneCore, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
-  CastleGLImages, X3DNodes;
+  CastleGLImages, X3DNodes, CastleColors;
 
 type
   PCastleSpineVertex = ^TCastleSpineVertex;
@@ -84,12 +84,16 @@ type
     FSpineData: PCastleSpineData;
     FSecondsPassedAcc: Single;
     FTicks: Integer;
+    FColor: TVector4;
+    FColorPersistent: TCastleColorPersistent;
     procedure Cleanup;
     procedure GLContextOpen;
     procedure InternalLoadSpine;
     procedure InternalPlayAnimation;
     procedure SetAutoAnimation(S: String);
     procedure SetAutoAnimationLoop(V: Boolean);
+    procedure SetColorForPersistent(const AValue: TVector4);
+    function GetColorForPersistent: TVector4;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -101,11 +105,13 @@ type
     function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true): boolean; overload;
     function PlayAnimation(const Parameters: TPlayAnimationParameters): boolean; overload;
     procedure StopAnimation;
+    property Color: TVector4 read FColor write FColor;
   published
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
     property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
     property EnableFog: Boolean read FEnableFog write FEnableFog default False;
+    property ColorPersistent: TCastleColorPersistent read FColorPersistent;
   end;
 
 implementation
@@ -140,14 +146,14 @@ const
 'uniform int fogEnable;'nl
 'uniform float fogEnd;'nl
 'uniform vec3 fogColor;'nl
+'uniform vec4 color;'nl
 
 'void main() {'nl
-'  vec4 color = texture2D(baseColor, fragTexCoord) * fragColor;'nl
+'  gl_FragColor = texture2D(baseColor, fragTexCoord) * fragColor * color;'nl
 '  if (fogEnable == 1) {'nl
 '    float fogFactor = (fogEnd - fragFogCoord) / fogEnd;'nl
-'    color.rgb = mix(fogColor, color.rgb, clamp(fogFactor, 0.0, 1.0));'nl
+'    gl_FragColor.rgb = mix(fogColor, gl_FragColor.rgb, clamp(fogFactor, 0.0, 1.0));'nl
 '  }'nl
-'  gl_FragColor = color;'nl
 '}';
 
 var
@@ -199,6 +205,14 @@ end;
 procedure LoaderFreeTexture(ObjPas: TObject);
 begin
   ObjPas.Free;
+end;
+
+function CreateColorPersistent(const G: TGetVector4Event; const S: TSetVector4Event; const ADefaultValue: TVector4): TCastleColorPersistent;
+begin
+  Result := TCastleColorPersistent.Create;
+  Result.InternalGetValue := G;
+  Result.InternalSetValue := S;
+  Result.InternalDefaultValue := ADefaultValue;
 end;
 
 { ----- TCastleSpineCache ----- }
@@ -372,17 +386,34 @@ begin
     Self.PlayAnimation(Self.FAutoAnimation, Self.FAutoAnimationLoop);
 end;
 
+procedure TCastleSpine.SetColorForPersistent(const AValue: TVector4);
+begin
+  Self.FColor := AValue;
+end;
+
+function TCastleSpine.GetColorForPersistent: TVector4;
+begin
+  Result := Self.FColor;
+end;
+
 constructor TCastleSpine.Create(AOwner: TComponent);
 begin
   inherited;
+  Self.FColor := Vector4(1, 1, 1, 1);
   Self.FParameters := TPlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
+  Self.FColorPersistent := CreateColorPersistent(
+    @Self.GetColorForPersistent,
+    @Self.SetColorForPersistent,
+    Self.FColor
+  );
 end;
 
 destructor TCastleSpine.Destroy;
 begin
   Self.Cleanup;
   Self.FParameters.Free;
+  Self.FColorPersistent.Free;
   inherited;
 end;
 
@@ -637,6 +668,7 @@ begin
 
   RenderProgram.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
   RenderProgram.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
+  RenderProgram.Uniform('color').SetValue(Self.FColor);
   if Self.FEnableFog and (Params.GlobalFog <> nil) then
   begin
     Fog := (Params.GlobalFog as TFogNode).Functionality(TFogFunctionality) as TFogFunctionality;
