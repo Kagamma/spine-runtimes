@@ -70,6 +70,7 @@ type
     FURL: String;
     FIsNeedRefreshAnimation: Boolean;
     FParameters: TPlayAnimationParameters;
+    FTrack: Integer;
     FIsGLContextInitialized: Boolean;
     FspSkeleton: PspSkeleton;
     FspAnimationState: PspAnimationState;
@@ -103,9 +104,9 @@ type
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     procedure LocalRender(const Params: TRenderParams); override;
     function LocalBoundingBox: TBox3D; override;
-    function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true): boolean; overload;
+    function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true; const Track: Integer = 0): boolean; overload;
     function PlayAnimation(const Parameters: TPlayAnimationParameters): boolean; overload;
-    procedure StopAnimation;
+    procedure StopAnimation(const Track: Integer = -1); overload;
     property Color: TVector4 read FColor write FColor;
   published
     property URL: String read FURL write LoadSpine;
@@ -731,26 +732,31 @@ begin
   Self.FParameters.Loop := Parameters.Loop;
   Self.FParameters.Forward := Parameters.Forward;
   Self.FParameters.TransitionDuration := Parameters.TransitionDuration;
+  Self.FTrack := 0;
   Self.FIsAnimationPlaying := True;
   Self.FIsNeedRefreshAnimation := True;
   Result := True;
 end;
 
-function TCastleSpine.PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean): boolean;
+function TCastleSpine.PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean; const Track: Integer = 0): boolean;
 begin
   Self.FParameters.Name := AnimationName;
   Self.FParameters.Loop := Loop;
   Self.FParameters.Forward := Forward;
   Self.FParameters.TransitionDuration := Self.DefaultAnimationTransition;
+  Self.FTrack := Track;
   Self.FIsAnimationPlaying := True;
   Self.FIsNeedRefreshAnimation := True;
   Result := True;
 end;
 
-procedure TCastleSpine.StopAnimation;
+procedure TCastleSpine.StopAnimation(const Track: Integer = -1);
 begin
   Self.FIsAnimationPlaying := False;
-  spAnimationState_clearTracks(Self.FspAnimationState);
+  if Track < 0 then
+    spAnimationState_clearTracks(Self.FspAnimationState)
+  else
+    spAnimationState_clearTrack(Self.FspAnimationState, Track);
 end;
 
 procedure TCastleSpine.InternalPlayAnimation;
@@ -773,7 +779,7 @@ begin
     begin
       spAnimationStateData_setMixByName(Self.FSpineData^.AnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
     end;
-    spAnimationState_setAnimationByName(Self.FspAnimationState, 0, PChar(Self.FParameters.Name), Self.FParameters.Loop);
+    spAnimationState_setAnimationByName(Self.FspAnimationState, Self.FTrack, PChar(Self.FParameters.Name), Self.FParameters.Loop);
     Self.FPreviousAnimation := Self.FParameters.Name;
   end;
   Self.FIsNeedRefreshAnimation := False;

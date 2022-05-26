@@ -389,6 +389,7 @@ var
   spAnimationState_apply: procedure(AnimationState: PspAnimationState; Skeleton: PspSkeleton); SPINECALL;
   spAnimationState_create: function(Data: PspAnimationStateData): PspAnimationState; SPINECALL;
   spAnimationState_dispose: procedure(Data: PspAnimationState); SPINECALL;
+  spAnimationState_clearTrack: procedure(Data: PspAnimationState; TrackIndex: cint); SPINECALL;
   spAnimationState_clearTracks: procedure(Data: PspAnimationState); SPINECALL;
 
   // BoundingBox
@@ -477,8 +478,9 @@ begin;
   spAnimationState_update := GetProcedureAddress(Lib, 'spAnimationState_update');
   spAnimationState_apply := GetProcedureAddress(Lib, 'spAnimationState_apply');
   spAnimationState_create := GetProcedureAddress(Lib, 'spAnimationState_create');
-  spAnimationState_dispose := GetProcedureAddress(Lib, 'spAnimationState_create');
-  spAnimationState_clearTracks := GetProcedureAddress(Lib, 'spAnimationState_create');
+  spAnimationState_dispose := GetProcedureAddress(Lib, 'spAnimationState_dispose');
+  spAnimationState_clearTrack := GetProcedureAddress(Lib, 'spAnimationState_clearTrack');
+  spAnimationState_clearTracks := GetProcedureAddress(Lib, 'spAnimationState_clearTracks');
 
   // BoundingBox
   spSkeletonBounds_create := GetProcedureAddress(Lib, 'spSkeletonBounds_create');
