@@ -84,6 +84,7 @@ type
     FSpineData: PCastleSpineData;
     FSecondsPassedAcc: Single;
     FTicks: Integer;
+    FSmoothTexture: Boolean;
     FColor: TVector4;
     FColorPersistent: TCastleColorPersistent;
     procedure Cleanup;
@@ -112,6 +113,7 @@ type
     property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
     property EnableFog: Boolean read FEnableFog write FEnableFog default False;
     property ColorPersistent: TCastleColorPersistent read FColorPersistent;
+    property SmoothTexture: Boolean read FSmoothTexture write FSmoothTexture default True;
   end;
 
 implementation
@@ -400,6 +402,7 @@ constructor TCastleSpine.Create(AOwner: TComponent);
 begin
   inherited;
   Self.FColor := Vector4(1, 1, 1, 1);
+  Self.FSmoothTexture := True;
   Self.FParameters := TPlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
   Self.FColorPersistent := CreateColorPersistent(
@@ -505,6 +508,9 @@ var
       if TotalVertexCount = 0 then
         Exit;
       // Render result
+      if Image.SmoothScaling <> Self.FSmoothTexture then
+        Image.SmoothScaling := Self.FSmoothTexture;
+
       glBindTexture(GL_TEXTURE_2D, Image.Texture);
 
       glBufferSubData(GL_ARRAY_BUFFER, 0, TotalVertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
@@ -514,8 +520,11 @@ var
       TotalVertexCount := 0;
       PreviousImage := Image;
       PreviousBlendMode := Integer(Slot^.data^.blendMode);
-      Inc(Params.Statistics.ShapesVisible, 1);
-      Inc(Params.Statistics.ShapesRendered, 1);
+      if not Self.ExcludeFromStatistics then
+      begin
+        Inc(Params.Statistics.ShapesVisible, 1);
+        Inc(Params.Statistics.ShapesRendered, 1);
+      end;
     end;
 
   begin
