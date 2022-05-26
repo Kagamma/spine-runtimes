@@ -81,6 +81,22 @@ type
   PspPropertyIdArray = Pointer;
   PspBoundingBoxAttachment = Pointer;
   PspPolygon = Pointer;
+  PspClippingAttachment = Pointer;
+  PspTriangulator = Pointer;
+  PspSkeleton = ^TSpSkeleton;
+
+  PspSkeletonClipping = ^TspSkeletonClipping;
+  TspSkeletonClipping = record
+    triangulator: PspTriangulator;
+    clippingPolygon: pcfloat;
+    clipOutput: pcfloat;
+    clippedVertices: pcfloat;
+    clippedUVs: pcfloat;
+    clippedTriangles: pcushort;
+    scratch: pcfloat;
+    clipAttachment: PspClippingAttachment;
+    clippingPolygons: ^pcfloat;
+  end;
 
   PspSkeletonBounds = ^TspSkeletonBounds;
   TspSkeletonBounds = record
@@ -205,8 +221,21 @@ type
     rendererObject: Pointer;
   end;
 
-  PspBone = Pointer;
+  PspBone = ^TspBone;
   PPspBone = ^PspBone;
+  TspBone = record
+    data: PspBoneData;
+    skeleton: PspSkeleton;
+    parent: PspBone;
+    childrenCount: cint;
+    children: PPspBone;
+    x, y, rotation, scaleX, scaleY, shearX, shearY: cfloat;
+    ax, ay, arotation, ascaleX, ascaleY, ashearX, ashearY: cfloat;
+    a, b, worldX: cfloat;
+    c, d, worldY: cfloat;
+    sorted: cbool;
+    active: cbool;
+  end;
 
   PspIkConstraint = Pointer;
   PPspIkConstraint = ^PspIkConstraint;
@@ -228,7 +257,6 @@ type
   PspSlot = ^TspSlot;
   PPspSlot = ^PspSlot;
 
-  PspSkeleton = ^TSpSkeleton;
   TspSkeleton = record
     data: PspSkeletonData;
 
@@ -332,6 +360,15 @@ var
   spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PspBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
   spVertexAttachment_computeWorldVertices: procedure(This: PspVertexAttachment; Slot: PspSlot; Start, Count: cint; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
 
+  // Clip
+  spSkeletonClipping_create: function: PspSkeletonClipping; SPINECALL;
+  spSkeletonClipping_dispose: procedure(Clip: PspSkeletonClipping); SPINECALL;
+  spSkeletonClipping_clipStart: function(This: PspSkeletonClipping; Slot: PspSlot; Attachment: PspClippingAttachment): cint; SPINECALL;
+  spSkeletonClipping_clipTriangles: procedure(This: PspSkeletonClipping; vertices: pcfloat; vertLen: cint; triangles: pcushort; triLen: cint; uvs: pcfloat; stride: cint); SPINECALL;
+  spSkeletonClipping_isClipping: function(This: PspSkeletonClipping): cint; SPINECALL;
+  spSkeletonClipping_clipEnd: procedure(This: PspSkeletonClipping; Slot: PspSlot); SPINECALL;
+  spSkeletonClipping_clipEnd2: procedure(This: PspSkeletonClipping); SPINECALL;
+
 function Spine_Load: Boolean;
 
 implementation
@@ -403,6 +440,15 @@ begin;
   // Attachment
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
   spVertexAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spVertexAttachment_computeWorldVertices');
+
+  // Clip
+  spSkeletonClipping_create := GetProcedureAddress(Lib, 'spSkeletonClipping_create');
+  spSkeletonClipping_dispose := GetProcedureAddress(Lib, 'spSkeletonClipping_dispose');
+  spSkeletonClipping_clipStart := GetProcedureAddress(Lib, 'spSkeletonClipping_clipStart');
+  spSkeletonClipping_clipTriangles := GetProcedureAddress(Lib, 'spSkeletonClipping_clipTriangles');
+  spSkeletonClipping_isClipping := GetProcedureAddress(Lib, 'spSkeletonClipping_isClipping');
+  spSkeletonClipping_clipEnd := GetProcedureAddress(Lib, 'spSkeletonClipping_clipEnd');
+  spSkeletonClipping_clipEnd2 := GetProcedureAddress(Lib, 'spSkeletonClipping_clipEnd2');
 
   Spine_MM_Malloc(@SpAlloc);
   Spine_MM_ReAlloc(@SpReAlloc);

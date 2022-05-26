@@ -74,6 +74,7 @@ type
     FspSkeleton: PspSkeleton;
     FspAnimationState: PspAnimationState;
     FspSkeletonBounds: PspSkeletonBounds;
+    FspClipper: PspSkeletonClipping;
     FEnableFog: Boolean;
     FIsNeedRefresh: Boolean;
     FPreviousAnimation: String;
@@ -152,9 +153,11 @@ const
 var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
+  SpineIndices: array[0..(High(WorldVerticesPositions) div 3) - 1] of Word;
   RenderProgram: TGLSLProgram;
   VBO: GLuint;
   SpineCache: TCastleSpineCache;
+  RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
 
 { Provide loader functions for Spine }
 procedure LoaderLoad(FileName: PChar; var Data: Pointer; var Size: LongWord); cdecl;
@@ -323,6 +326,9 @@ begin
   Self.FspSkeletonBounds := spSkeletonBounds_create();
   spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
 
+  // Create clipper
+  Self.FspClipper := spSkeletonClipping_create();
+
   // Load animation list
   Self.AnimationsList.Clear;
   for I := 0 to SpineData^.SkeletonData^.animationsCount - 1 do
@@ -342,9 +348,12 @@ begin
     spSkeleton_dispose(Self.FspSkeleton);
   if Self.FspSkeletonBounds <> nil then
     spSkeletonBounds_dispose(Self.FspSkeletonBounds);
+  if Self.FspClipper <> nil then
+    spSkeletonClipping_dispose(Self.FspClipper);
   Self.FspSkeleton := nil;
   Self.FspAnimationState := nil;
   Self.FspSkeletonBounds := nil;
+  Self.FspClipper := nil;
 end;
 
 procedure TCastleSpine.SetAutoAnimation(S: String);
@@ -445,24 +454,30 @@ var
     Attachment: PspAttachment;
     RegionAttachment: PspRegionAttachment;
     MeshAttachment: PspMeshAttachment;
+    ClipAttachment: PspClippingAttachment;
     Slot: PspSlot;
-    VertexCount: Cardinal;
+    TotalIndexCount,
+    TotalVertexCount: Cardinal;
     PreviousImage: TDrawableImage = nil;
     Image: TDrawableImage;
     PreviousBlendMode: Integer = -1;
+    AttachmentColor: TspColor;
     Color: TVector4;
-    V: PCastleSpineVertex;
+    VertexCount,
+    IndexCount: Cardinal;
+    IndexPtr: PWord;
+    UVPtr: PSingle;
 
     procedure Render; inline;
     begin
       // Render result
       glBindTexture(GL_TEXTURE_2D, Image.Texture);
 
-      glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, TotalVertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
 
-      glDrawArrays(GL_TRIANGLES, 0, VertexCount);
+      glDrawArrays(GL_TRIANGLES, 0, TotalVertexCount);
 
-      VertexCount := 0;
+      TotalVertexCount := 0;
       PreviousImage := Image;
       PreviousBlendMode := Integer(Slot^.data^.blendMode);
       Inc(Params.Statistics.ShapesVisible, 1);
@@ -470,7 +485,8 @@ var
     end;
 
   begin
-    VertexCount := 0;
+    TotalVertexCount := 0;
+    TotalIndexCount := 0;
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(0));
@@ -482,9 +498,17 @@ var
     begin
       Slot := Skeleton^.drawOrder[J];
       Attachment := Slot^.Attachment;
-      if Attachment <> nil then
+
+      if Attachment = nil then Continue;
+      if (Slot^.color.a = 0) or (not Slot^.bone^.active) then
       begin
-        // Blend mode
+      //  spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+        Continue;
+      end;
+
+      // Blend mode
+      if Integer(Slot^.data^.blendMode) <> PreviousBlendMode then
+      begin
         if Self.FSpineData^.Atlas^.pages^.pma <> 0 then
         begin
           case Slot^.data^.blendMode of
@@ -502,69 +526,78 @@ var
               glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
           end;
         end;
-        if Attachment^.type_ = SP_ATTACHMENT_REGION then
+        PreviousBlendMode := Integer(Slot^.data^.blendMode);
+      end;
+
+      if Attachment^.type_ = SP_ATTACHMENT_REGION then
+      begin
+        RegionAttachment := PspRegionAttachment(Attachment);
+        AttachmentColor := RegionAttachment^.color;
+        if AttachmentColor.a = 0 then
         begin
-          RegionAttachment := PspRegionAttachment(Attachment);
-          Color := Vector4(
-            Skeleton^.color.r * Slot^.color.r * RegionAttachment^.color.r,
-            Skeleton^.color.g * Slot^.color.g * RegionAttachment^.color.g,
-            Skeleton^.color.b * Slot^.color.b * RegionAttachment^.color.b,
-            Skeleton^.color.a * Slot^.color.a * RegionAttachment^.color.a
-          );
-          Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
-          spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
-          // Create 2 triangles
-          AddVertex(WorldVerticesPositions[0], WorldVerticesPositions[1],
-              RegionAttachment^.uvs[0], 1 - RegionAttachment^.uvs[1],
-              Color, VertexCount);
-          AddVertex(WorldVerticesPositions[2], WorldVerticesPositions[3],
-              RegionAttachment^.uvs[2], 1 - RegionAttachment^.uvs[3],
-              Color, VertexCount);
-          AddVertex(WorldVerticesPositions[4], WorldVerticesPositions[5],
-              RegionAttachment^.uvs[4], 1 - RegionAttachment^.uvs[5],
-              Color, VertexCount);
-          AddVertex(WorldVerticesPositions[4], WorldVerticesPositions[5],
-              RegionAttachment^.uvs[4], 1 - RegionAttachment^.uvs[5],
-              Color, VertexCount);
-          AddVertex(WorldVerticesPositions[6], WorldVerticesPositions[7],
-              RegionAttachment^.uvs[6], 1 - RegionAttachment^.uvs[7],
-              Color, VertexCount);
-          AddVertex(WorldVerticesPositions[0], WorldVerticesPositions[1],
-              RegionAttachment^.uvs[0], 1 - RegionAttachment^.uvs[1],
-              Color, VertexCount);
-        end else
-        if Attachment^.type_ = SP_ATTACHMENT_MESH then
-        begin
-          MeshAttachment := PspMeshAttachment(Attachment);
-          if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
-          Color := Vector4(
-            Skeleton^.color.r * Slot^.color.r * MeshAttachment^.color.r,
-            Skeleton^.color.g * Slot^.color.g * MeshAttachment^.color.g,
-            Skeleton^.color.b * Slot^.color.b * MeshAttachment^.color.b,
-            Skeleton^.color.a * Slot^.color.a * MeshAttachment^.color.a
-          );
-          Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
-          spVertexAttachment_computeWorldVertices(@MeshAttachment^.super, Slot, 0, MeshAttachment^.Super.worldVerticesLength, @WorldVerticesPositions[0], 0, 2);
-          // Create mesh
-          for I := 0 to MeshAttachment^.trianglesCount - 1 do
-          begin
-            Indx := MeshAttachment^.triangles[I] shl 1;
-            AddVertex(WorldVerticesPositions[Indx], WorldVerticesPositions[Indx + 1],
-                MeshAttachment^.uvs[Indx], 1 - MeshAttachment^.uvs[Indx + 1],
-                Color, VertexCount);
-          end;
+        //  spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+          Continue;
         end;
-        if J = 0 then
+        Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
+        spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
+        if PreviousImage = nil then
         begin
           PreviousImage := Image;
-          PreviousBlendMode := Integer(Slot^.data^.blendMode);
         end;
-        if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
-          // Render result
-          Render;
+        VertexCount := 4;
+        IndexCount := 6;
+        IndexPtr := @RegionIndices[0];
+        UVPtr := RegionAttachment^.uvs;
+      end else
+      if Attachment^.type_ = SP_ATTACHMENT_MESH then
+      begin
+        MeshAttachment := PspMeshAttachment(Attachment);
+        AttachmentColor := RegionAttachment^.color;
+        if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
+        if AttachmentColor.a = 0 then
+        begin
+        //  spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+          Continue;
+        end;
+        Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
+        spVertexAttachment_computeWorldVertices(@MeshAttachment^.super, Slot, 0, MeshAttachment^.Super.worldVerticesLength, @WorldVerticesPositions[0], 0, 2);
+        if PreviousImage = nil then
+        begin
+          PreviousImage := Image;
+        end;
+        VertexCount := MeshAttachment^.super.worldVerticesLength shr 1;
+        IndexCount := MeshAttachment^.trianglesCount;
+        IndexPtr := MeshAttachment^.triangles;
+        UVPtr := MeshAttachment^.uvs;
+      end else
+      if Attachment^.type_ = SP_ATTACHMENT_CLIPPING then
+      begin
+        ClipAttachment := PspClippingAttachment(Attachment);
+      //  spSkeletonClipping_clipStart(Self.FspClipper, Slot, ClipAttachment);
       end;
+
+      Color := Vector4(
+        Skeleton^.color.r * Slot^.color.r * AttachmentColor.r,
+        Skeleton^.color.g * Slot^.color.g * AttachmentColor.g,
+        Skeleton^.color.b * Slot^.color.b * AttachmentColor.b,
+        Skeleton^.color.a * Slot^.color.a * AttachmentColor.a
+      );
+
+      // Build mesh
+      // TODO: Separate indices / vertices to save bandwidth
+      for I := 0 to IndexCount - 1 do
+      begin
+        Indx := IndexPtr[I] shl 1;
+        AddVertex(WorldVerticesPositions[Indx], WorldVerticesPositions[Indx + 1],
+            UVPtr[Indx], 1 - UVPtr[Indx + 1],
+            Color, TotalVertexCount);
+      end;
+
+      if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
+        // Render result
+        Render;
     end;
-    if VertexCount > 0 then
+    if TotalVertexCount > 0 then
       Render;
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
