@@ -4,34 +4,14 @@
   "Name" : "Group1",
   "$Children" : [
     {
-      "$$ClassName" : "TCastleLabel",
-      "ColorPersistent" : {
-        "$$ClassName" : "TCastleColorPersistent",
-        "Green" : 1.0000000000000000E+000,
-        "Red" : 1.0000000000000000E+000
-      },
-      "FontSize" : 2.0000000000000000E+001,
-      "HorizontalAnchorDelta" : -2.0000000000000000E+001,
-      "HorizontalAnchorParent" : "hpRight",
-      "HorizontalAnchorSelf" : "hpRight",
-      "Name" : "LabelFps",
-      "Text" : [
-        "FPS: xxx"
-      ],
-      "VerticalAnchorDelta" : -2.0000000000000000E+001,
-      "VerticalAnchorParent" : "vpTop",
-      "VerticalAnchorSelf" : "vpTop",
-      "WordWrap" : false
-    },
-    {
       "$$ClassName" : "TCastleViewport",
       "Camera" : {
         "$$ClassName" : "TCastleCamera",
         "InitialDirectionPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : 1.9852794706821442E-001,
-          "Y" : -2.7840420603752136E-001,
-          "Z" : -9.3972218036651611E-001
+          "X" : 1.8796472251415253E-001,
+          "Y" : -2.7786290645599365E-001,
+          "Z" : -9.4205170869827271E-001
         },
         "InitialPositionPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
@@ -41,9 +21,9 @@
         },
         "InitialUpPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : 6.4425714313983917E-002,
-          "Y" : 9.6044021844863892E-001,
-          "Z" : -2.7093145251274109E-001
+          "X" : 6.4389526844024658E-002,
+          "Y" : 9.6057057380676270E-001,
+          "Z" : -2.7047774195671082E-001
         },
         "Name" : "Camera",
         "Orthographic" : {
@@ -90,6 +70,33 @@
             "$$ClassName" : "TCastleSpine",
             "AutoAnimation" : "flying",
             "ExposeTransforms" : [
+              "root",
+              "bone",
+              "bone2",
+              "bone4",
+              "bone12",
+              "bone14",
+              "bone24",
+              "bone26",
+              "bone41",
+              "bone5",
+              "bone51",
+              "bone27",
+              "bone34",
+              "bone6",
+              "bone28",
+              "bone35",
+              "bone7",
+              "bone29",
+              "bone30",
+              "bone31",
+              "bone33",
+              "bone36",
+              "bone37",
+              "bone38",
+              "bone40",
+              "bone8",
+              "bone60"
             ],
             "Name" : "Spine1",
             "ProcessEvents" : true,
@@ -115,6 +122,26 @@
           "Name" : "ExamineNavigation1"
         }
       ]
+    },
+    {
+      "$$ClassName" : "TCastleLabel",
+      "ColorPersistent" : {
+        "$$ClassName" : "TCastleColorPersistent",
+        "Green" : 1.0000000000000000E+000,
+        "Red" : 1.0000000000000000E+000
+      },
+      "FontSize" : 2.0000000000000000E+001,
+      "HorizontalAnchorDelta" : -2.0000000000000000E+001,
+      "HorizontalAnchorParent" : "hpRight",
+      "HorizontalAnchorSelf" : "hpRight",
+      "Name" : "LabelFps",
+      "Text" : [
+        "FPS: xxx"
+      ],
+      "VerticalAnchorDelta" : -2.0000000000000000E+001,
+      "VerticalAnchorParent" : "vpTop",
+      "VerticalAnchorSelf" : "vpTop",
+      "WordWrap" : false
     }
   ]
 }

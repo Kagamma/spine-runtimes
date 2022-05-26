@@ -9,7 +9,7 @@ interface
 
 uses Classes,
   CastleVectors, CastleUIState, CastleComponentSerialize,
-  CastleUIControls, CastleControls, CastleKeysMouse,
+  CastleUIControls, CastleControls, CastleKeysMouse, CastleViewport,
   CastleSpine;
 
 type
@@ -18,6 +18,7 @@ type
   private
     { Components designed using CGE editor, loaded from gamestatemain.castle-user-interface. }
     LabelFps: TCastleLabel;
+    Viewport: TCastleViewport;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Start; override;
@@ -46,13 +47,14 @@ begin
 
   { Find components, by name, that we need to access from code }
   LabelFps := DesignedComponent('LabelFps') as TCastleLabel;
+  Viewport := DesignedComponent('Viewport1') as TCastleViewport;
 end;
 
 procedure TStateMain.Update(const SecondsPassed: Single; var HandleInput: Boolean);
 begin
   inherited;
   { This virtual method is executed every frame.}
-  LabelFps.Caption := 'FPS: ' + Container.Fps.ToString;
+  LabelFps.Caption := 'FPS: ' + Viewport.Statistics.ToString;
 end;
 
 function TStateMain.Press(const Event: TInputPressRelease): Boolean;

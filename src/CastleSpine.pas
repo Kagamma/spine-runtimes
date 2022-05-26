@@ -83,6 +83,7 @@ type
     FAutoAnimation: String;
     FAutoAnimationLoop: Boolean;
     FSpineData: PCastleSpineData;
+    FDistanceCulling: Single;
     FSecondsPassedAcc: Single;
     FTicks: Integer;
     FSmoothTexture: Boolean;
@@ -115,6 +116,7 @@ type
     property EnableFog: Boolean read FEnableFog write FEnableFog default False;
     property ColorPersistent: TCastleColorPersistent read FColorPersistent;
     property SmoothTexture: Boolean read FSmoothTexture write FSmoothTexture default True;
+    property DistanceCulling: Single read FDistanceCulling write FDistanceCulling default 0;
   end;
 
 implementation
@@ -476,11 +478,9 @@ begin
 end;
 
 procedure TCastleSpine.LocalRender(const Params: TRenderParams);
-var
-  PreviousProgram: TGLSLProgram;
-  Fog: TFogFunctionality;
 
   procedure RenderSkeleton(const Skeleton: PspSkeleton);
+
     procedure AddVertex(const X, Y, U, V: Single; const Color: TVector4; var Indx: Cardinal); inline;
     var
       P: PCastleSpineVertex;
@@ -530,7 +530,8 @@ var
       PreviousBlendMode := Integer(Slot^.data^.blendMode);
       if not Self.ExcludeFromStatistics then
       begin
-        Inc(Params.Statistics.ShapesRendered, 1);
+        Inc(Params.Statistics.ShapesRendered);
+        Inc(Params.Statistics.ShapesVisible);
       end;
     end;
 
@@ -545,7 +546,6 @@ var
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(16));
 
-    Inc(Params.Statistics.ShapesVisible, Skeleton^.slotsCount);
     for J := 0 to Skeleton^.slotsCount - 1 do
     begin
       Slot := Skeleton^.drawOrder[J];
@@ -673,8 +673,17 @@ var
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    if not Self.ExcludeFromStatistics then
+    begin
+      Inc(Params.Statistics.ScenesRendered);
+    end;
   end;
 
+var
+  PreviousProgram: TGLSLProgram;
+  Fog: TFogFunctionality;
+  RenderCameraPosition: TVector3;
+  RelativeBBox: TBox3D;
 begin
   inherited;
   if Self.FspAnimationState = nil then
@@ -683,6 +692,26 @@ begin
     Exit;
   if (not Self.Visible) or (not Self.Exists) or Params.InShadow or (not Params.Transparent) or (Params.StencilTest > 0) then
     Exit;
+
+  if not Self.ExcludeFromStatistics then
+  begin
+    Inc(Params.Statistics.ScenesVisible);
+  end;
+  if DistanceCulling > 0 then
+  begin
+    RenderCameraPosition := Params.InverseTransform^.MultPoint(Params.RenderingCamera.Position);
+    if RenderCameraPosition.Length > DistanceCulling + LocalBoundingBox.Radius then
+      Exit;
+  end;
+  if Self.FspSkeletonBounds^.minX < Self.FspSkeletonBounds^.maxX then
+  begin
+    RelativeBBox := Box3D(
+      Vector3(Self.FspSkeletonBounds^.minX, Self.FspSkeletonBounds^.minY, -0.0001),
+      Vector3(Self.FspSkeletonBounds^.maxX, Self.FspSkeletonBounds^.maxY, 0.0001)
+    );
+    if not Params.Frustum^.Box3DCollisionPossibleSimple(RelativeBBox) then
+      Exit;
+  end;
 
   PreviousProgram := RenderContext.CurrentProgram;
   RenderProgram.Enable;
