@@ -58,8 +58,8 @@ type
     AnimationStateData: PspAnimationStateData;
   end;
 
-  TCastleSpineCacheBase = specialize TDictionary<String, PCastleSpineData>;
-  TCastleSpineCache = class(TCastleSpineCacheBase)
+  TCastleSpineDataCacheBase = specialize TDictionary<String, PCastleSpineData>;
+  TCastleSpineDataCache = class(TCastleSpineDataCacheBase)
   public
     // Clear the cache
     procedure Clear; override;
@@ -164,7 +164,7 @@ var
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
   RenderProgram: TGLSLProgram;
   VBO: GLuint;
-  SpineCache: TCastleSpineCache;
+  SpineDataCache: TCastleSpineDataCache;
   RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
 
 { Provide loader functions for Spine }
@@ -217,9 +217,9 @@ begin
   Result.InternalDefaultValue := ADefaultValue;
 end;
 
-{ ----- TCastleSpineCache ----- }
+{ ----- TCastleSpineDataCache ----- }
 
-procedure TCastleSpineCache.Clear;
+procedure TCastleSpineDataCache.Clear;
 var
   Key: String;
   SpineData: PCastleSpineData;
@@ -299,9 +299,9 @@ begin
   end;
 
   if CastleDesignMode then
-    SpineCache.Clear; // We don't cache spine data in castle-editor
+    SpineDataCache.Clear; // We don't cache spine data in castle-editor
 
-  if not SpineCache.ContainsKey(Self.FURL) then
+  if not SpineDataCache.ContainsKey(Self.FURL) then
   begin
     New(SpineData);
 
@@ -329,7 +329,7 @@ begin
     // Prepare animation state data
     SpineData^.AnimationStateData := spAnimationStateData_create(SpineData^.SkeletonData);
   end else
-    SpineData := SpineCache[Self.FURL];
+    SpineData := SpineDataCache[Self.FURL];
 
   // Create animation state
   Self.FspAnimationState := spAnimationState_create(SpineData^.AnimationStateData);
@@ -787,9 +787,9 @@ end;
 
 initialization
   RegisterSerializableComponent(TCastleSpine, 'Spine');
-  SpineCache := TCastleSpineCache.Create;
+  SpineDataCache := TCastleSpineDataCache.Create;
 
 finalization
-  SpineCache.Free;
+  SpineDataCache.Free;
 
 end.
