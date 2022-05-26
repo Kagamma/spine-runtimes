@@ -750,6 +750,7 @@ end;
 procedure TCastleSpine.StopAnimation;
 begin
   Self.FIsAnimationPlaying := False;
+  spAnimationState_clearTracks(Self.FspAnimationState);
 end;
 
 procedure TCastleSpine.InternalPlayAnimation;
