@@ -242,7 +242,6 @@ procedure TCastleSpine.GLContextOpen;
 begin
   if not ApplicationProperties.IsGLContextOpen then Exit;
   if Self.FIsGLContextInitialized then Exit;
-  // TODO: Handle resources when OpenGL context is opened
   if Spine_Load then
   begin
     Spine_Loader_RegisterLoadRoutine(@LoaderLoad);
@@ -529,7 +528,6 @@ var
       PreviousBlendMode := Integer(Slot^.data^.blendMode);
       if not Self.ExcludeFromStatistics then
       begin
-        Inc(Params.Statistics.ShapesVisible, 1);
         Inc(Params.Statistics.ShapesRendered, 1);
       end;
     end;
@@ -546,6 +544,7 @@ var
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(16));
 
+    Inc(Params.Statistics.ShapesVisible, Skeleton^.slotsCount);
     for J := 0 to Skeleton^.slotsCount - 1 do
     begin
       Slot := Skeleton^.drawOrder[J];
