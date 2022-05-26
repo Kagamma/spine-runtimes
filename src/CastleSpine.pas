@@ -577,53 +577,58 @@ var
         PreviousBlendMode := Integer(Slot^.data^.blendMode);
       end;
 
-      if Attachment^.type_ = SP_ATTACHMENT_REGION then
-      begin
-        RegionAttachment := PspRegionAttachment(Attachment);
-        AttachmentColor := RegionAttachment^.color;
-        if AttachmentColor.a = 0 then
-        begin
-          spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+      case Attachment^.type_ of
+        SP_ATTACHMENT_REGION:
+          begin
+            RegionAttachment := PspRegionAttachment(Attachment);
+            AttachmentColor := RegionAttachment^.color;
+            if AttachmentColor.a = 0 then
+            begin
+              spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+              Continue;
+            end;
+            Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
+            spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
+            if PreviousImage = nil then
+            begin
+              PreviousImage := Image;
+            end;
+            VertexCount := 4;
+            IndexCount := 6;
+            VertexPtr := @WorldVerticesPositions[0];
+            IndexPtr := @RegionIndices[0];
+            UVPtr := RegionAttachment^.uvs;
+          end;
+        SP_ATTACHMENT_MESH:
+          begin
+            MeshAttachment := PspMeshAttachment(Attachment);
+            AttachmentColor := RegionAttachment^.color;
+            if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
+            if AttachmentColor.a = 0 then
+            begin
+              spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+              Continue;
+            end;
+            Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
+            spVertexAttachment_computeWorldVertices(@MeshAttachment^.super, Slot, 0, MeshAttachment^.Super.worldVerticesLength, @WorldVerticesPositions[0], 0, 2);
+            if PreviousImage = nil then
+            begin
+              PreviousImage := Image;
+            end;
+            VertexCount := MeshAttachment^.super.worldVerticesLength shr 1;
+            IndexCount := MeshAttachment^.trianglesCount;
+            VertexPtr := @WorldVerticesPositions[0];
+            IndexPtr := MeshAttachment^.triangles;
+            UVPtr := MeshAttachment^.uvs;
+          end;
+        SP_ATTACHMENT_CLIPPING:
+          begin
+            ClipAttachment := PspClippingAttachment(Attachment);
+            spSkeletonClipping_clipStart(Self.FspClipper, Slot, ClipAttachment);
+            Continue;
+          end;
+        else
           Continue;
-        end;
-        Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
-        spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
-        if PreviousImage = nil then
-        begin
-          PreviousImage := Image;
-        end;
-        VertexCount := 4;
-        IndexCount := 6;
-        VertexPtr := @WorldVerticesPositions[0];
-        IndexPtr := @RegionIndices[0];
-        UVPtr := RegionAttachment^.uvs;
-      end else
-      if Attachment^.type_ = SP_ATTACHMENT_MESH then
-      begin
-        MeshAttachment := PspMeshAttachment(Attachment);
-        AttachmentColor := RegionAttachment^.color;
-        if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
-        if AttachmentColor.a = 0 then
-        begin
-          spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
-          Continue;
-        end;
-        Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
-        spVertexAttachment_computeWorldVertices(@MeshAttachment^.super, Slot, 0, MeshAttachment^.Super.worldVerticesLength, @WorldVerticesPositions[0], 0, 2);
-        if PreviousImage = nil then
-        begin
-          PreviousImage := Image;
-        end;
-        VertexCount := MeshAttachment^.super.worldVerticesLength shr 1;
-        IndexCount := MeshAttachment^.trianglesCount;
-        VertexPtr := @WorldVerticesPositions[0];
-        IndexPtr := MeshAttachment^.triangles;
-        UVPtr := MeshAttachment^.uvs;
-      end else
-      if Attachment^.type_ = SP_ATTACHMENT_CLIPPING then
-      begin
-        ClipAttachment := PspClippingAttachment(Attachment);
-        spSkeletonClipping_clipStart(Self.FspClipper, Slot, ClipAttachment);
       end;
 
       // Flush the current pipeline if material change
