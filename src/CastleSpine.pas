@@ -161,7 +161,6 @@ const
 var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
-  SpineIndices: array[0..(High(WorldVerticesPositions) div 3) - 1] of Word;
   RenderProgram: TGLSLProgram;
   VBO: GLuint;
   SpineCache: TCastleSpineCache;
@@ -496,7 +495,6 @@ var
     MeshAttachment: PspMeshAttachment;
     ClipAttachment: PspClippingAttachment;
     Slot: PspSlot;
-    TotalIndexCount,
     TotalVertexCount: Cardinal;
     PreviousImage: TDrawableImage = nil;
     Image: TDrawableImage;
@@ -534,7 +532,6 @@ var
 
   begin
     TotalVertexCount := 0;
-    TotalIndexCount := 0;
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glEnableVertexAttribArray(0);
