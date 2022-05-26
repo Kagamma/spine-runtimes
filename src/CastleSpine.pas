@@ -40,7 +40,7 @@ uses
   {$endif}
   CastleVectors, CastleSceneCore, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
-  CastleGLImages;
+  CastleGLImages, X3DNodes;
 
 type
   PCastleSpineVertex = ^TCastleSpineVertex;
@@ -74,6 +74,7 @@ type
     FspSkeleton: PspSkeleton;
     FspAnimationState: PspAnimationState;
     FspSkeletonBounds: PspSkeletonBounds;
+    FEnableFog: Boolean;
     FIsNeedRefresh: Boolean;
     FPreviousAnimation: String;
     FIsAnimationPlaying: Boolean;
@@ -101,6 +102,7 @@ type
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
     property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
+    property EnableFog: Boolean read FEnableFog write FEnableFog default False;
   end;
 
 implementation
@@ -113,25 +115,36 @@ const
 
 'varying vec2 fragTexCoord;'nl
 'varying vec4 fragColor;'nl
+'varying vec4 fragFogCoord;'nl
 
-'uniform mat4 mvpMatrix;'nl
+'uniform mat4 mvMatrix;'nl
+'uniform mat4 pMatrix;'nl
 
 'void main() {'nl
 '  fragTexCoord = inTexCoord;'nl
 '  fragColor = inColor;'nl
-'  gl_Position = mvpMatrix * vec4(inVertex, 0.0, 1.0);'nl
+'  vec4 p = mvMatrix * vec4(inVertex, 0.0, 1.0);'nl
+'  fragFogCoord = abs(p.z / p.w);'nl
+'  gl_Position = pMatrix * p;'nl
 '}';
 
   FragmentShaderSource: String =
-'precision lowp float;'nl
-
 'varying vec2 fragTexCoord;'nl
 'varying vec4 fragColor;'nl
+'varying vec4 fragFogCoord;'nl
 
 'uniform sampler2D baseColor;'nl
+'uniform int fogEnable;'nl
+'uniform float fogEnd;'nl
+'uniform vec3 fogColor;'nl
 
 'void main() {'nl
-'  gl_FragColor = texture(baseColor, fragTexCoord) * fragColor;'nl
+'  vec4 color = texture2D(baseColor, fragTexCoord) * fragColor;'nl
+'  if (fogEnable == 1) {'nl
+'    float fogFactor = (fogEnd - fragFogCoord) / fogEnd;'nl
+'    color.rgb = mix(fogColor, color.rgb, clamp(fogFactor, 0.0, 1.0));'nl
+'  }'nl
+'  gl_FragColor = color;'nl
 '}';
 
 var
@@ -407,6 +420,7 @@ end;
 procedure TCastleSpine.LocalRender(const Params: TRenderParams);
 var
   PreviousProgram: TGLSLProgram;
+  Fog: TFogFunctionality;
 
   procedure RenderSkeleton(const Skeleton: PspSkeleton);
     procedure AddVertex(const X, Y, U, V: Single; const Color: TVector4; var Indx: Cardinal); inline;
@@ -558,10 +572,20 @@ begin
     Exit;
   if (not Self.Visible) or (not Self.Exists) or Params.InShadow or (not Params.Transparent) or (Params.StencilTest > 0) then
     Exit;
+
   PreviousProgram := RenderContext.CurrentProgram;
   RenderProgram.Enable;
 
-  RenderProgram.Uniform('mvpMatrix').SetValue(RenderContext.ProjectionMatrix * Params.RenderingCamera.Matrix * Params.Transform^);
+  RenderProgram.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
+  RenderProgram.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
+  if Self.FEnableFog and (Params.GlobalFog <> nil) then
+  begin
+    Fog := (Params.GlobalFog as TFogNode).Functionality(TFogFunctionality) as TFogFunctionality;
+    RenderProgram.Uniform('fogEnable').SetValue(1);
+    RenderProgram.Uniform('fogEnd').SetValue(Fog.VisibilityRange);
+    RenderProgram.Uniform('fogColor').SetValue(Fog.Color);
+  end else
+    RenderProgram.Uniform('fogEnable').SetValue(0);
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
