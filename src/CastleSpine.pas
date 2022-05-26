@@ -40,7 +40,7 @@ uses
   {$endif}
   CastleVectors, CastleSceneCore, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
-  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils;
+  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors;
 
 type
   PCastleSpineVertex = ^TCastleSpineVertex;
@@ -77,6 +77,7 @@ type
     FspSkeletonBounds: PspSkeletonBounds;
     FspClipper: PspSkeletonClipping;
     FEnableFog: Boolean;
+    FIsNeedRefreshBones: Boolean;
     FIsNeedRefresh: Boolean;
     FPreviousAnimation: String;
     FIsAnimationPlaying: Boolean;
@@ -89,15 +90,19 @@ type
     FSmoothTexture: Boolean;
     FColor: TVector4;
     FExposeBones: TStrings;
+    FExposeBonesPrefix: String;
     FColorPersistent: TCastleColorPersistent;
     procedure Cleanup;
+    procedure InternalExposeBonesChange;
+    procedure ExposeBonesChange(Sender: TObject);
     procedure GLContextOpen;
     procedure InternalLoadSpine;
     procedure InternalPlayAnimation;
-    procedure SetAutoAnimation(S: String);
-    procedure SetAutoAnimationLoop(V: Boolean);
+    procedure SetAutoAnimation(const S: String);
+    procedure SetAutoAnimationLoop(const V: Boolean);
     procedure SetColorForPersistent(const AValue: TVector4);
     procedure SetExposeBones(const Value: TStrings);
+    procedure SetExposeBonesPrefix(const S: String);
     function GetColorForPersistent: TVector4;
   public
     constructor Create(AOwner: TComponent); override;
@@ -123,6 +128,7 @@ type
     property SmoothTexture: Boolean read FSmoothTexture write FSmoothTexture default True;
     property DistanceCulling: Single read FDistanceCulling write FDistanceCulling default 0;
     property ExposeBones: TStrings read FExposeBones write SetExposeBones;
+    property ExposeBonesPrefix: String read FExposeBonesPrefix write SetExposeBonesPrefix;
   end;
 
 implementation
@@ -166,6 +172,13 @@ const
 '    gl_FragColor.rgb = mix(fogColor, gl_FragColor.rgb, clamp(fogFactor, 0.0, 1.0));'nl
 '  }'nl
 '}';
+
+type
+  TCastleSpineTransformBehavior = class(TCastleBehavior)
+  public
+    Bone: PspBone;
+    procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
+  end;
 
 var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
@@ -223,6 +236,22 @@ begin
   Result.InternalGetValue := G;
   Result.InternalSetValue := S;
   Result.InternalDefaultValue := ADefaultValue;
+end;
+
+function ValidName(const S: String): String;
+begin
+  Result := StringReplace(S, ' ', '_', [rfReplaceAll]);
+end;
+
+{ ----- TCastleSpineTransformBehavior ----- }
+
+procedure TCastleSpineTransformBehavior.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
+begin
+  inherited;
+  if Bone = nil then Exit;
+  Self.Parent.Translation := Vector3(Self.Bone^.worldX, Self.Bone^.worldY, 0);
+  Self.Parent.Rotation := Vector4(0, 0, 1, spBone_getWorldRotationX(Self.Bone) * 0.017453);
+  Self.Parent.Scale := Vector3(spBone_getWorldScaleX(Bone), spBone_getWorldScaleY(Bone), 1);
 end;
 
 { ----- TCastleSpineDataCache ----- }
@@ -364,11 +393,7 @@ begin
   end;
 
   // Expose bone list
-  Self.ExposeBones.Clear;
-  for I := 0 to SpineData^.SkeletonData^.bonesCount - 1 do
-  begin
-    Self.ExposeBones.Add(SpineData^.SkeletonData^.bones[I]^.name);
-  end;
+  Self.ExposeBonesChange(nil);
 
   Self.FIsNeedRefresh := False;
   Self.FSpineData := SpineData;
@@ -390,7 +415,72 @@ begin
   Self.FspClipper := nil;
 end;
 
-procedure TCastleSpine.SetAutoAnimation(S: String);
+procedure TCastleSpine.ExposeBonesChange(Sender: TObject);
+begin
+  Self.FIsNeedRefreshBones := True;
+end;
+
+procedure TCastleSpine.InternalExposeBonesChange;
+var
+  T: TCastleTransform;
+  B: TCastleSpineTransformBehavior;
+  I, J, K: Integer;
+  Bone: PspBone;
+  OldTransformList: TCastleTransformList;
+  TransformName: String;
+begin
+  if Self.FspSkeleton = nil then Exit;
+  OldTransformList := TCastleTransformList.Create;
+  try
+    OldTransformList.OwnsObjects := False;
+    for I := 0 to Self.Count - 1 do
+    begin
+      T := Self.Items[I];
+      if T.FindBehavior(TCastleSpineTransformBehavior) <> nil then
+        OldTransformList.Add(T);
+    end;
+    // Generate new transforms, skip if old transforms is found
+    for I := 0 to Self.FspSkeleton^.bonesCount - 1 do
+    begin
+      Bone := Self.FspSkeleton^.bones[I];
+      TransformName := ValidName(Self.FExposeBonesPrefix + Bone^.data^.name);
+      for J := 0 to Self.FExposeBones.Count - 1 do
+      begin
+        if Self.FExposeBones[J] = Bone^.data^.name then
+        begin
+          T := nil;
+          for K := 0 to OldTransformList.Count - 1 do
+            if OldTransformList[K].Name = TransformName then
+            begin
+              T := OldTransformList[K];
+              OldTransformList.Delete(K);
+              B := T.FindBehavior(TCastleSpineTransformBehavior) as TCastleSpineTransformBehavior;
+              Break;
+            end;
+          if T = nil then
+          begin
+            T := TCastleTransform.Create(Self);
+            T.Name := TransformName;
+            Self.Add(T);
+            B := TCastleSpineTransformBehavior.Create(T);
+            B.Name := T.Name + '_Behavior';
+            T.AddBehavior(B);
+          end;
+          B.Bone := Bone;
+        end;
+      end;
+    end;
+    // Remove remaining old transforms
+    for I := 0 to OldTransformList.Count - 1 do
+      OldTransformList[I].Free;
+    InternalCastleDesignInvalidate := True;
+  finally
+    OldTransformList.Free;
+  end;
+  Self.FIsNeedRefreshBones := False;
+end;
+
+procedure TCastleSpine.SetAutoAnimation(const S: String);
 begin
   Self.FAutoAnimation := S;
   if Self.FAutoAnimation <> '' then
@@ -399,7 +489,7 @@ begin
     Self.StopAnimation;
 end;
 
-procedure TCastleSpine.SetAutoAnimationLoop(V: Boolean);
+procedure TCastleSpine.SetAutoAnimationLoop(const V: Boolean);
 begin
   Self.FAutoAnimationLoop := V;
   if Self.FAutoAnimation <> '' then
@@ -411,11 +501,33 @@ begin
   Self.FColor := AValue;
 end;
 
-
 procedure TCastleSpine.SetExposeBones(const Value: TStrings);
 begin
   Self.FExposeBones.Assign(Value);
 end;
+
+procedure TCastleSpine.SetExposeBonesPrefix(const S: String);
+var
+  T: TCastleTransform;
+  B: TCastleSpineTransformBehavior;
+  I: Integer;
+  Bone: PspBone;
+begin
+  Self.FExposeBonesPrefix := S;
+  // Rename transforms
+  for I := 0 to Self.Count - 1 do
+  begin
+    T := Self.Items[I];
+    B := T.FindBehavior(TCastleSpineTransformBehavior) as TCastleSpineTransformBehavior;
+    if B <> nil then
+    begin
+      T.Name := ValidName(Self.FExposeBonesPrefix + B.Bone^.data^.name);
+      B.Name := T.Name + '_Behavior';
+      InternalCastleDesignInvalidate := True;
+    end;
+  end;
+end;
+
 
 function TCastleSpine.GetColorForPersistent: TVector4;
 begin
@@ -430,6 +542,7 @@ begin
   Self.FParameters := TPlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
   Self.FExposeBones := TStringList.Create;
+  TStringList(Self.FExposeBones).OnChange := @Self.ExposeBonesChange;
   Self.FColorPersistent := CreateColorPersistent(
     @Self.GetColorForPersistent,
     @Self.SetColorForPersistent,
@@ -480,6 +593,8 @@ begin
     Self.InternalLoadSpine;
   if Self.FIsNeedRefreshAnimation then
     Self.InternalPlayAnimation;
+  if Self.FIsNeedRefreshBones then
+    Self.InternalExposeBonesChange;
 
   RemoveMe := rtNone;
   // Update
@@ -845,6 +960,7 @@ end;
 
 initialization
   RegisterSerializableComponent(TCastleSpine, 'Spine');
+  RegisterSerializableComponent(TCastleSpineTransformBehavior, 'Spine Transform Behavior');
   SpineDataCache := TCastleSpineDataCache.Create;
 
 finalization

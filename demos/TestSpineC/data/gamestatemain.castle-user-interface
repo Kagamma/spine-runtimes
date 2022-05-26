@@ -9,9 +9,9 @@
         "$$ClassName" : "TCastleCamera",
         "InitialDirectionPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : 1.8796472251415253E-001,
-          "Y" : -2.7786290645599365E-001,
-          "Z" : -9.4205170869827271E-001
+          "X" : 1.1600837111473083E-001,
+          "Y" : -2.7266249060630798E-001,
+          "Z" : -9.5509016513824463E-001
         },
         "InitialPositionPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
@@ -21,9 +21,9 @@
         },
         "InitialUpPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : 6.4389526844024658E-002,
-          "Y" : 9.6057057380676270E-001,
-          "Z" : -2.7047774195671082E-001
+          "X" : 6.3668318092823029E-002,
+          "Y" : 9.6164631843566895E-001,
+          "Z" : -2.6680082082748413E-001
         },
         "Name" : "Camera",
         "Orthographic" : {
@@ -69,34 +69,10 @@
           {
             "$$ClassName" : "TCastleSpine",
             "AutoAnimation" : "flying",
+            "ExposeBones" : [
+              ""
+            ],
             "ExposeTransforms" : [
-              "root",
-              "bone",
-              "bone2",
-              "bone4",
-              "bone12",
-              "bone14",
-              "bone24",
-              "bone26",
-              "bone41",
-              "bone5",
-              "bone51",
-              "bone27",
-              "bone34",
-              "bone6",
-              "bone28",
-              "bone35",
-              "bone7",
-              "bone29",
-              "bone30",
-              "bone31",
-              "bone33",
-              "bone36",
-              "bone37",
-              "bone38",
-              "bone40",
-              "bone8",
-              "bone60"
             ],
             "Name" : "Spine1",
             "ProcessEvents" : true,
