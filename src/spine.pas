@@ -56,6 +56,13 @@ type
     SP_ATLAS_CLAMPTOEDGE,
     SP_ATLAS_REPEAT
   );
+  TspTransformMode = (
+    SP_TRANSFORMMODE_NORMAL,
+    SP_TRANSFORMMODE_ONLYTRANSLATION,
+    SP_TRANSFORMMODE_NOROTATIONORREFLECTION,
+    SP_TRANSFORMMODE_NOSCALE,
+    SP_TRANSFORMMODE_NOSCALEORREFLECTION
+  );
   {$packenum 1}
 
   TspColor = record
@@ -88,7 +95,18 @@ type
     error: PChar;
   end;
 
-  PspBoneData = Pointer;
+  PspBoneData = ^TspBoneData;
+  TspBoneData = record
+    index_: cint;
+    name: PChar;
+    parent: PspBoneData;
+    length: cfloat;
+    x, y, rotation, scaleX, scaleY, shearX, shearY: cfloat;
+    transformMode: TspTransformMode;
+    skinRequired: cbool;
+    color: TspColor;
+  end;
+
   PspSkin = Pointer;
   PspEventData = Pointer;
   PspTimelineArray = Pointer;

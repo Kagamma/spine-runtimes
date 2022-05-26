@@ -352,6 +352,13 @@ begin
     Self.AnimationsList.Add(SpineData^.SkeletonData^.animations[I]^.name);
   end;
 
+  // Expose transform list
+  Self.ExposeTransforms.Clear;
+  for I := 0 to SpineData^.SkeletonData^.bonesCount - 1 do
+  begin
+    Self.ExposeTransforms.Add(SpineData^.SkeletonData^.bones[I]^.name);
+  end;
+
   Self.FIsNeedRefresh := False;
   Self.FSpineData := SpineData;
 end;
