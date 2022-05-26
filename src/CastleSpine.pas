@@ -465,11 +465,14 @@ var
     Color: TVector4;
     VertexCount,
     IndexCount: Cardinal;
+    VertexPtr: PSingle;
     IndexPtr: PWord;
     UVPtr: PSingle;
 
     procedure Render; inline;
     begin
+      if TotalVertexCount = 0 then
+        Exit;
       // Render result
       glBindTexture(GL_TEXTURE_2D, Image.Texture);
 
@@ -487,6 +490,7 @@ var
   begin
     TotalVertexCount := 0;
     TotalIndexCount := 0;
+
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(0));
@@ -494,6 +498,7 @@ var
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(8));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(16));
+
     for J := 0 to Skeleton^.slotsCount - 1 do
     begin
       Slot := Skeleton^.drawOrder[J];
@@ -502,7 +507,7 @@ var
       if Attachment = nil then Continue;
       if (Slot^.color.a = 0) or (not Slot^.bone^.active) then
       begin
-      //  spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+        spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
         Continue;
       end;
 
@@ -535,7 +540,7 @@ var
         AttachmentColor := RegionAttachment^.color;
         if AttachmentColor.a = 0 then
         begin
-        //  spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+          spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
           Continue;
         end;
         Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
@@ -546,6 +551,7 @@ var
         end;
         VertexCount := 4;
         IndexCount := 6;
+        VertexPtr := @WorldVerticesPositions[0];
         IndexPtr := @RegionIndices[0];
         UVPtr := RegionAttachment^.uvs;
       end else
@@ -556,7 +562,7 @@ var
         if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
         if AttachmentColor.a = 0 then
         begin
-        //  spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+          spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
           Continue;
         end;
         Image := TDrawableImage(PspAtlasRegion(MeshAttachment^.rendererObject)^.page^.rendererObject);
@@ -567,14 +573,19 @@ var
         end;
         VertexCount := MeshAttachment^.super.worldVerticesLength shr 1;
         IndexCount := MeshAttachment^.trianglesCount;
+        VertexPtr := @WorldVerticesPositions[0];
         IndexPtr := MeshAttachment^.triangles;
         UVPtr := MeshAttachment^.uvs;
       end else
       if Attachment^.type_ = SP_ATTACHMENT_CLIPPING then
       begin
         ClipAttachment := PspClippingAttachment(Attachment);
-      //  spSkeletonClipping_clipStart(Self.FspClipper, Slot, ClipAttachment);
+        spSkeletonClipping_clipStart(Self.FspClipper, Slot, ClipAttachment);
       end;
+
+      // Flush the current pipeline if material change
+      if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
+        Render;
 
       Color := Vector4(
         Skeleton^.color.r * Slot^.color.r * AttachmentColor.r,
@@ -583,22 +594,31 @@ var
         Skeleton^.color.a * Slot^.color.a * AttachmentColor.a
       );
 
+      if spSkeletonClipping_isClipping(Self.FspClipper) then
+      begin
+        spSkeletonClipping_clipTriangles(Self.FspClipper, VertexPtr, VertexCount shl 1, IndexPtr, IndexCount, UVPtr, 2);
+        VertexPtr := Self.FspClipper^.clippedVertices^.items;
+        VertexCount := Self.FspClipper^.clippedVertices^.size shr 1;
+        UVPtr := Self.FspClipper^.clippedUVs^.items;
+        IndexPtr := Self.FspClipper^.clippedTriangles^.items;
+        IndexCount := Self.FspClipper^.clippedTriangles^.size;
+      end;
+
       // Build mesh
       // TODO: Separate indices / vertices to save bandwidth
       for I := 0 to IndexCount - 1 do
       begin
         Indx := IndexPtr[I] shl 1;
-        AddVertex(WorldVerticesPositions[Indx], WorldVerticesPositions[Indx + 1],
+        AddVertex(VertexPtr[Indx], VertexPtr[Indx + 1],
             UVPtr[Indx], 1 - UVPtr[Indx + 1],
             Color, TotalVertexCount);
       end;
 
-      if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
-        // Render result
-        Render;
+			spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
     end;
-    if TotalVertexCount > 0 then
-      Render;
+    Render;
+		spSkeletonClipping_clipEnd2(Self.FspClipper);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
   end;

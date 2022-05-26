@@ -63,6 +63,20 @@ type
   end;
   PspColor = ^TspColor;
 
+  PspFloatArray = ^TspFloatArray;
+  TspFloatArray = record
+    size: cint;
+    capacity: cint;
+    items: pcfloat;
+  end;
+
+  PspUnsignedShortArray = ^TspUnsignedShortArray;
+  TspUnsignedShortArray = record
+    size: cint;
+    capacity: cint;
+    items: pcushort;
+  end;
+
   PspKeyValueArray = Pointer;
 
   PspAttachmentLoader = Pointer;
@@ -88,14 +102,14 @@ type
   PspSkeletonClipping = ^TspSkeletonClipping;
   TspSkeletonClipping = record
     triangulator: PspTriangulator;
-    clippingPolygon: pcfloat;
-    clipOutput: pcfloat;
-    clippedVertices: pcfloat;
-    clippedUVs: pcfloat;
-    clippedTriangles: pcushort;
-    scratch: pcfloat;
+    clippingPolygon: PspFloatArray;
+    clipOutput: PspFloatArray;
+    clippedVertices: PspFloatArray;
+    clippedUVs: PspFloatArray;
+    clippedTriangles: PspUnsignedShortArray;
+    scratch: PspFloatArray;
     clipAttachment: PspClippingAttachment;
-    clippingPolygons: ^pcfloat;
+    clippingPolygons: ^PspFloatArray;
   end;
 
   PspSkeletonBounds = ^TspSkeletonBounds;
@@ -365,7 +379,7 @@ var
   spSkeletonClipping_dispose: procedure(Clip: PspSkeletonClipping); SPINECALL;
   spSkeletonClipping_clipStart: function(This: PspSkeletonClipping; Slot: PspSlot; Attachment: PspClippingAttachment): cint; SPINECALL;
   spSkeletonClipping_clipTriangles: procedure(This: PspSkeletonClipping; vertices: pcfloat; vertLen: cint; triangles: pcushort; triLen: cint; uvs: pcfloat; stride: cint); SPINECALL;
-  spSkeletonClipping_isClipping: function(This: PspSkeletonClipping): cint; SPINECALL;
+  spSkeletonClipping_isClipping: function(This: PspSkeletonClipping): cbool; SPINECALL;
   spSkeletonClipping_clipEnd: procedure(This: PspSkeletonClipping; Slot: PspSlot); SPINECALL;
   spSkeletonClipping_clipEnd2: procedure(This: PspSkeletonClipping); SPINECALL;
 
