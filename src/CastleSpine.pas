@@ -50,16 +50,27 @@ type
     Color: TVector4;
   end;
 
+  PCastleSpineData = ^TCastleSpineData;
+  TCastleSpineData = record
+    Atlas: PspAtlas;
+    SkeletonJson: PspSkeletonJson;
+    SkeletonData: PspSkeletonData;
+    AnimationStateData: PspAnimationStateData;
+  end;
+
+  TCastleSpineCacheBase = specialize TDictionary<String, PCastleSpineData>;
+  TCastleSpineCache = class(TCastleSpineCacheBase)
+  public
+    // Clear the cache
+    procedure Clear; override;
+  end;
+
   TCastleSpine = class(TCastleSceneCore)
   strict private
     FURL: String;
     FIsNeedRefreshAnimation: Boolean;
     FParameters: TPlayAnimationParameters;
     FIsGLContextInitialized: Boolean;
-    FspAtlas: PspAtlas;
-    FspSkeletonJson: PspSkeletonJson;
-    FspSkeletonData: PspSkeletonData;
-    FspAnimationStateData: PspAnimationStateData;
     FspSkeleton: PspSkeleton;
     FspAnimationState: PspAnimationState;
     FspSkeletonBounds: PspSkeletonBounds;
@@ -68,6 +79,7 @@ type
     FIsAnimationPlaying: Boolean;
     FAutoAnimation: String;
     FAutoAnimationLoop: Boolean;
+    FSpineData: PCastleSpineData;
     procedure Cleanup;
     procedure GLContextOpen;
     procedure InternalLoadSpine;
@@ -127,6 +139,7 @@ var
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
   RenderProgram: TGLSLProgram;
   VBO: GLuint;
+  SpineCache: TCastleSpineCache;
 
 { Provide loader functions for Spine }
 procedure LoaderLoad(FileName: PChar; var Data: Pointer; var Size: LongWord); cdecl;
@@ -168,6 +181,25 @@ end;
 procedure LoaderFreeTexture(ObjPas: TObject);
 begin
   ObjPas.Free;
+end;
+
+{ ----- TCastleSpineCache ----- }
+
+procedure TCastleSpineCache.Clear;
+var
+  Key: String;
+  SpineData: PCastleSpineData;
+begin
+  for Key in Self.Keys do
+  begin
+    SpineData := Self[Key];
+    spAtlas_dispose(SpineData^.Atlas);
+    spSkeletonJson_dispose(SpineData^.SkeletonJson);
+    spSkeletonData_dispose(SpineData^.SkeletonData);
+    spAnimationStateData_dispose(SpineData^.AnimationStateData);
+    Dispose(SpineData);
+  end;
+  inherited;
 end;
 
 { ----- TCastleSpine ----- }
@@ -222,6 +254,7 @@ var
   AtlasFullPath: String;
   MS: TMemoryStream;
   SS: TStringStream;
+  SpineData: PCastleSpineData;
   I: Integer;
 begin
   Self.Cleanup;
@@ -232,34 +265,44 @@ begin
     Exit;
   end;
 
-  Path := ExtractFilePath(Self.FURL);
-  SkeletonFullPath := Self.FURL;
-  AtlasFullPath := Path + StringReplace(ExtractFileName(Self.FURL), ExtractFileExt(Self.FURL), '', [rfReplaceAll]) + '.atlas';
+  if CastleDesignMode then
+    SpineCache.Clear; // We don't cache spine data in castle-editor
 
-  // Load atlas
-  MS := Download(AtlasFullPath, [soForceMemoryStream]) as TMemoryStream;
-  Self.FspAtlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path), nil);
-  Self.FspAtlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path), nil);
-  MS.Free;
+  if not SpineCache.ContainsKey(Self.FURL) then
+  begin
+    New(SpineData);
 
-  // Load skeleton data
-  MS := Download(SkeletonFullPath, [soForceMemoryStream]) as TMemoryStream;
-  SS := TStringStream.Create('');
-  try
-    SS.CopyFrom(MS, MS.Size);
-    Self.FspSkeletonJson := spSkeletonJson_create(Self.FspAtlas);
-    Self.FspSkeletonData := spSkeletonJson_readSkeletonData(Self.FspSkeletonJson, PChar(SS.DataString));
-  finally
-    SS.Free;
-  end;
-  MS.Free;
+    Path := ExtractFilePath(Self.FURL);
+    SkeletonFullPath := Self.FURL;
+    AtlasFullPath := Path + StringReplace(ExtractFileName(Self.FURL), ExtractFileExt(Self.FURL), '', [rfReplaceAll]) + '.atlas';
 
-  // Prepare animation state data
-  Self.FspAnimationStateData := spAnimationStateData_create(Self.FspSkeletonData);
-  Self.FspAnimationState := spAnimationState_create(Self.FspAnimationStateData);
+    // Load atlas
+    MS := Download(AtlasFullPath, [soForceMemoryStream]) as TMemoryStream;
+    SpineData^.Atlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path), nil);
+    MS.Free;
+
+    // Load skeleton data
+    MS := Download(SkeletonFullPath, [soForceMemoryStream]) as TMemoryStream;
+    SS := TStringStream.Create('');
+    try
+      SS.CopyFrom(MS, MS.Size);
+      SpineData^.SkeletonJson := spSkeletonJson_create(SpineData^.Atlas);
+      SpineData^.SkeletonData := spSkeletonJson_readSkeletonData(SpineData^.SkeletonJson, PChar(SS.DataString));
+    finally
+      SS.Free;
+    end;
+    MS.Free;
+
+    // Prepare animation state data
+    SpineData^.AnimationStateData := spAnimationStateData_create(SpineData^.SkeletonData);
+  end else
+    SpineData := SpineCache[Self.FURL];
+
+  // Create animation state
+  Self.FspAnimationState := spAnimationState_create(SpineData^.AnimationStateData);
 
   // Create skeleton
-  Self.FspSkeleton := spSkeleton_create(Self.FspSkeletonData);
+  Self.FspSkeleton := spSkeleton_create(SpineData^.SkeletonData);
 
   // Create boundingbox
   Self.FspSkeletonBounds := spSkeletonBounds_create();
@@ -267,34 +310,23 @@ begin
 
   // Load animation list
   Self.AnimationsList.Clear;
-  for I := 0 to Self.FspSkeletonData^.animationsCount - 1 do
+  for I := 0 to SpineData^.SkeletonData^.animationsCount - 1 do
   begin
-    Self.AnimationsList.Add(Self.FspSkeletonData^.animations[I]^.name);
+    Self.AnimationsList.Add(SpineData^.SkeletonData^.animations[I]^.name);
   end;
 
   Self.FIsNeedRefresh := False;
+  Self.FSpineData := SpineData;
 end;
 
 procedure TCastleSpine.Cleanup;
 begin
   if Self.FspAnimationState <> nil then
     spAnimationState_dispose(Self.FspAnimationState);
-  if Self.FspAtlas <> nil then
-    spAtlas_dispose(Self.FspAtlas);
-  if Self.FspSkeletonJson <> nil then
-    spSkeletonJson_dispose(Self.FspSkeletonJson);
-  if Self.FspSkeletonData <> nil then
-    spSkeletonData_dispose(Self.FspSkeletonData);
-  if Self.FspAnimationStateData <> nil then
-    spAnimationStateData_dispose(Self.FspAnimationStateData);
   if Self.FspSkeleton <> nil then
     spSkeleton_dispose(Self.FspSkeleton);
-  if Self.FspSkeleton <> nil then
+  if Self.FspSkeletonBounds <> nil then
     spSkeletonBounds_dispose(Self.FspSkeletonBounds);
-  Self.FspAtlas := nil;
-  Self.FspSkeletonJson := nil;
-  Self.FspSkeletonData := nil;
-  Self.FspAnimationStateData := nil;
   Self.FspSkeleton := nil;
   Self.FspAnimationState := nil;
   Self.FspSkeletonBounds := nil;
@@ -433,7 +465,7 @@ var
       if Attachment <> nil then
       begin
         // Blend mode
-        if Self.FspAtlas^.pages^.pma <> 0 then
+        if Self.FSpineData^.Atlas^.pages^.pma <> 0 then
         begin
           case Slot^.data^.blendMode of
             SP_BLEND_MODE_ADDITIVE:
@@ -591,8 +623,8 @@ procedure TCastleSpine.InternalPlayAnimation;
   var
     I: Integer;
   begin
-    for I := 0 to Self.FspSkeletonData^.animationsCount - 1 do
-      if Self.FspSkeletonData^.animations[I]^.Name = Self.FParameters.Name then
+    for I := 0 to Self.FSpineData^.SkeletonData^.animationsCount - 1 do
+      if Self.FSpineData^.SkeletonData^.animations[I]^.Name = Self.FParameters.Name then
         Exit(True);
     Exit(False);
   end;
@@ -603,7 +635,7 @@ begin
   begin
     if (Self.FPreviousAnimation <> '') and (Self.FPreviousAnimation <> Self.FParameters.Name) then
     begin
-      spAnimationStateData_setMixByName(Self.FspAnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
+      spAnimationStateData_setMixByName(Self.FSpineData^.AnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
     end;
     spAnimationState_setAnimationByName(Self.FspAnimationState, 0, PChar(Self.FParameters.Name), Self.FParameters.Loop);
     Self.FPreviousAnimation := Self.FParameters.Name;
@@ -613,5 +645,9 @@ end;
 
 initialization
   RegisterSerializableComponent(TCastleSpine, 'Spine');
+  SpineCache := TCastleSpineCache.Create;
+
+finalization
+  SpineCache.Free;
 
 end.

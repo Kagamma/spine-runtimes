@@ -404,9 +404,9 @@ begin;
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
   spVertexAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spVertexAttachment_computeWorldVertices');
 
-  //Spine_MM_Malloc(@SpAlloc);
-  //Spine_MM_ReAlloc(@SpReAlloc);
-  //Spine_MM_Free(@SpFree);
+  Spine_MM_Malloc(@SpAlloc);
+  Spine_MM_ReAlloc(@SpReAlloc);
+  Spine_MM_Free(@SpFree);
 
   Exit(True);
 end;
