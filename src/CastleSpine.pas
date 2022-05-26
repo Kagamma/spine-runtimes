@@ -95,18 +95,12 @@ implementation
 
 const
   VertexShaderSource =
-{$ifdef GLES}
-'#version 300 es'nl
-{$else}
-'#version 330'nl
-{$endif}
+'attribute vec2 inVertex;'nl
+'attribute vec2 inTexCoord;'nl
+'attribute vec4 inColor;'nl
 
-'layout(location = 0) in vec2 inVertex;'nl
-'layout(location = 1) in vec2 inTexCoord;'nl
-'layout(location = 2) in vec4 inColor;'nl
-
-'out vec2 fragTexCoord;'nl
-'out vec4 fragColor;'nl
+'varying vec2 fragTexCoord;'nl
+'varying vec4 fragColor;'nl
 
 'uniform mat4 mvpMatrix;'nl
 
@@ -117,29 +111,22 @@ const
 '}';
 
   FragmentShaderSource: String =
-{$ifdef GLES}
-'#version 300 es'nl
-{$else}
-'#version 330'nl
-{$endif}
 'precision lowp float;'nl
 
-'in vec2 fragTexCoord;'nl
-'in vec4 fragColor;'nl
-
-'out vec4 outColor;'nl
+'varying vec2 fragTexCoord;'nl
+'varying vec4 fragColor;'nl
 
 'uniform sampler2D baseColor;'nl
 
 'void main() {'nl
-'  outColor = texture(baseColor, fragTexCoord) * fragColor;'nl
+'  gl_FragColor = texture(baseColor, fragTexCoord) * fragColor;'nl
 '}';
 
 var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
   RenderProgram: TGLSLProgram;
-  VAO, VBO: GLuint;
+  VBO: GLuint;
 
 { Provide loader functions for Spine }
 procedure LoaderLoad(FileName: PChar; var Data: Pointer; var Size: LongWord); cdecl;
@@ -203,24 +190,13 @@ begin
     RenderProgram.AttachFragmentShader(FragmentShaderSource);
     RenderProgram.Link;
   end;
-  if VAO = 0 then
+  if VBO = 0 then
   begin
-    glGenVertexArrays(1, @VAO);
     glGenBuffers(1, @VBO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, Length(SpineVertices) * SizeOf(TCastleSpineVertex), @SpineVertices[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(0));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(8));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(16));
-    glBindVertexArray(0);
   end;
   Self.FIsGLContextInitialized := True;
 end;
@@ -229,11 +205,10 @@ procedure TCastleSpine.GLContextClose;
 begin
   if Self.FIsGLContextInitialized then
   begin
-    if VAO <> 0 then
+    if VBO <> 0 then
     begin
       glDeleteBuffers(1, @VBO);
-      glDeleteVertexArrays(1, @VAO);
-      VAO := 0;
+      VBO := 0;
     end;
     Self.FIsGLContextInitialized := False;
   end;
@@ -431,13 +406,10 @@ var
       // Render result
       glBindTexture(GL_TEXTURE_2D, Image.Texture);
 
-      glBindBuffer(GL_ARRAY_BUFFER, VBO);
       glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
-      glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-      glBindVertexArray(VAO);
       glDrawArrays(GL_TRIANGLES, 0, VertexCount);
-      glBindVertexArray(0);
+
       VertexCount := 0;
       PreviousImage := Image;
       PreviousBlendMode := Integer(Slot^.data^.blendMode);
@@ -447,6 +419,13 @@ var
 
   begin
     VertexCount := 0;
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(0));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(8));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(16));
     for J := 0 to Skeleton^.slotsCount - 1 do
     begin
       Slot := Skeleton^.drawOrder[J];
@@ -535,6 +514,7 @@ var
     end;
     if VertexCount > 0 then
       Render;
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
   end;
 
