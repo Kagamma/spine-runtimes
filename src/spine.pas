@@ -63,6 +63,14 @@ type
     SP_TRANSFORMMODE_NOSCALE,
     SP_TRANSFORMMODE_NOSCALEORREFLECTION
   );
+  TspEventType = (
+    SP_ANIMATION_START,
+    SP_ANIMATION_INTERRUPT,
+    SP_ANIMATION_END,
+    SP_ANIMATION_COMPLETE,
+    SP_ANIMATION_DISPOSE,
+    SP_ANIMATION_EVENT
+  );
   {$packenum 1}
 
   TspColor = record
@@ -116,6 +124,10 @@ type
   PspClippingAttachment = Pointer;
   PspTriangulator = Pointer;
   PspSkeleton = ^TSpSkeleton;
+  PspTrackEntry = ^TspTrackEntry;
+  PspEvent = ^TspEvent;
+  PspAnimationState = ^TspAnimationState;
+  PspAnimationStateListener = Pointer;
 
   PspSkeletonClipping = ^TspSkeletonClipping;
   TspSkeletonClipping = record
@@ -191,7 +203,16 @@ type
   end;
 
   PspAnimationStateData = Pointer;
-  PspAnimationState = Pointer;
+  TspAnimationState = record
+    data: PspAnimationStateData;
+    tracksCount: cint;
+    tracks: PspTrackEntry;
+    listener: PspAnimationStateListener;
+    timeScale: cfloat;
+    rendererObject: Pointer;
+    userData: Pointer;
+    unkeyedState: cint;
+  end;
 
   TspAttachment = record
     name: Pchar;
@@ -347,6 +368,29 @@ type
     width, height: cfloat;
   end;
 
+  TspTrackEntry = record
+    animation: PspAnimation;
+    previous, next, mixingFrom, mixingTo: PspTrackEntry;
+    listener: TspAnimationStateListener;
+    trackIndex: cint;
+    loop, holdPrevious, reverse: cint;
+    eventThreshold, attachmentThreshold, drawOrderThreshold: cfloat;
+    animationStart, animationEnd, animationLast, nextAnimationLast: cfloat;
+    delay, trackTime, trackLast, nextTrackLast, trackEnd, timeScale: cfloat;
+    alpha, mixTime, mixDuration, interruptAlpha, totalAlpha: cfloat;
+    // TODO: Still missing fields
+  end;
+
+  TspEvent = record
+    data: PspEventData;
+    time: cfloat;
+    intValue: cint;
+    floatValue: cfloat;
+    stringValue: PChar;
+    volume: cfloat;
+    balance: cfloat;
+  end;
+
 var
   // ----- Loader -----
   { FileName: PWideChar; Data: Pointer; var Size: cuint32 }
@@ -384,7 +428,7 @@ var
   spAnimationStateData_create: function(SkeletonData: PspSkeletonData): PspAnimationStateData; SPINECALL;
   spAnimationStateData_dispose: procedure(AnimationStateData: PspAnimationStateData); SPINECALL;
   spAnimationStateData_setMixByName: procedure(AnimationStateData: PspAnimationStateData; FromName, ToName: PChar; Duration: cfloat); SPINECALL;
-  spAnimationState_setAnimationByName: procedure(AnimationState: PspAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cbool); SPINECALL;
+  spAnimationState_setAnimationByName: function(AnimationState: PspAnimationState; TrackIndex: cint; AnimationName: PChar; Loop: cbool): PspTrackEntry; SPINECALL;
   spAnimationState_update: procedure(AnimationState: PspAnimationState; Delta: cfloat); SPINECALL;
   spAnimationState_apply: procedure(AnimationState: PspAnimationState; Skeleton: PspSkeleton); SPINECALL;
   spAnimationState_create: function(Data: PspAnimationStateData): PspAnimationState; SPINECALL;

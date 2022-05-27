@@ -37,13 +37,15 @@ uses
   {$endif}
   {$ifdef CASTLE_DESIGN_MODE}
   PropEdits, CastlePropEdits, CastleDebugTransform, Forms, Controls, Graphics, Dialogs,
-  ButtonPanel, StdCtrls, ExtCtrls,
+  ButtonPanel, StdCtrls, ExtCtrls, CastleInternalExposeTransformsDialog,
   {$endif}
   CastleVectors, CastleSceneCore, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
-  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors, CastleInternalExposeTransformsDialog;
+  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors;
 
 type
+  TCastleSpineEventNotify = procedure(State: PspAnimationState; Typ: TSpEventType; Entry: PspTrackEntry; Event: PspEvent) of object;
+
   PCastleSpineVertex = ^TCastleSpineVertex;
   TCastleSpineVertex = packed record
     Vertex: TVector2;
@@ -86,13 +88,15 @@ type
     FAutoAnimationLoop: Boolean;
     FSpineData: PCastleSpineData;
     FDistanceCulling: Single;
-    FSecondsPassedAcc: Single;
-    FTicks: Integer;
+    FSecondsPassedAcc: Single; // Used by AnimationSkipTicks
+    FTicks: Integer; // Used by AnimationSkipTicks
     FSmoothTexture: Boolean;
     FColor: TVector4;
     FExposeTransforms: TStrings;
     FExposeTransformsPrefix: String;
     FColorPersistent: TCastleColorPersistent;
+    FOnEventNotify: TCastleSpineEventNotify;
+    { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
     procedure ExposeTransformsChange(Sender: TObject);
@@ -116,11 +120,14 @@ type
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     procedure LocalRender(const Params: TRenderParams); override;
     function LocalBoundingBox: TBox3D; override;
+    { Similar to PlayAnimation. The Track parameter tell Spine runtime which track we play the animation, allows to mix multiple animations }
     function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true; const Track: Integer = 0): boolean; overload;
     function PlayAnimation(const Parameters: TPlayAnimationParameters): boolean; overload;
+    { Similar to StopAnimation. The Track parameter tell Spine runtime which track we stop the animation. If Track = -1, then we stop all animations }
     procedure StopAnimation(const Track: Integer = -1); overload;
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
+    property OnEventNotify: TCastleSpineEventNotify read FOnEventNotify write FOnEventNotify;
   published
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
@@ -198,6 +205,7 @@ var
   RenderProgram: TGLSLProgram;
   VBO: GLuint;
   RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
+  CurrentSpineInstance: TCastleSpine;
 
 { Provide loader functions for Spine }
 procedure LoaderLoad(FileName: PChar; var Data: Pointer; var Size: LongWord); cdecl;
@@ -252,6 +260,13 @@ end;
 function ValidName(const S: String): String;
 begin
   Result := StringsReplace(S, [' ', '-'], ['_', '_'], [rfReplaceAll]);
+end;
+
+procedure EventListener(State: PspAnimationState; Typ: TSpEventType; Entry: PspTrackEntry; Event: PspEvent); cdecl;
+begin
+  if (CurrentSpineInstance <> nil) and (CurrentSpineInstance.OnEventNotify <> nil) then
+    CurrentSpineInstance.OnEventNotify(State, Typ, Entry, Event);
+  Writeln(Entry^.animation^.name, ', ', Typ);
 end;
 
 { ----- TCastleSpineTransformBehavior ----- }
@@ -412,6 +427,7 @@ begin
     Self.FIsNeedRefresh := False;
     Exit;
   end;
+  CurrentSpineInstance := Self;
 
   {$ifdef CASTLE_DESIGN_MODE}
   SpineDataCache.Clear; // We don't cache spine data in castle-editor
@@ -449,6 +465,7 @@ begin
 
   // Create animation state
   Self.FspAnimationState := spAnimationState_create(SpineData^.AnimationStateData);
+  Self.FspAnimationState^.listener := @EventListener;
 
   // Create skeleton
   Self.FspSkeleton := spSkeleton_create(SpineData^.SkeletonData);
@@ -475,10 +492,12 @@ begin
 
   Self.FIsNeedRefresh := False;
   Self.FSpineData := SpineData;
+  CurrentSpineInstance := nil;
 end;
 
 procedure TCastleSpine.Cleanup;
 begin
+  CurrentSpineInstance := Self;
   if Self.FspAnimationState <> nil then
     spAnimationState_dispose(Self.FspAnimationState);
   if Self.FspSkeleton <> nil then
@@ -491,6 +510,7 @@ begin
   Self.FspAnimationState := nil;
   Self.FspSkeletonBounds := nil;
   Self.FspClipper := nil;
+  CurrentSpineInstance := nil;
 end;
 
 procedure TCastleSpine.ExposeTransformsChange(Sender: TObject);
@@ -606,7 +626,6 @@ begin
   end;
 end;
 
-
 function TCastleSpine.GetColorForPersistent: TVector4;
 begin
   Result := Self.FColor;
@@ -659,6 +678,7 @@ var
   F: Single;
 begin
   inherited;
+  CurrentSpineInstance := Self;
   Self.GLContextOpen;
 
   if not Self.Exists then
@@ -694,6 +714,7 @@ begin
       end;
     end;
   end;
+  CurrentSpineInstance := nil;
 end;
 
 procedure TCastleSpine.LocalRender(const Params: TRenderParams);
@@ -1023,6 +1044,7 @@ procedure TCastleSpine.InternalPlayAnimation;
 
 begin
   if Self.FspAnimationState = nil then Exit;
+  CurrentSpineInstance := Self;
   if IsAnimationExists then
   begin
     if (Self.FPreviousAnimation <> '') and (Self.FPreviousAnimation <> Self.FParameters.Name) then
@@ -1033,6 +1055,7 @@ begin
     Self.FPreviousAnimation := Self.FParameters.Name;
   end;
   Self.FIsNeedRefreshAnimation := False;
+  CurrentSpineInstance := nil;
 end;
 
 initialization
