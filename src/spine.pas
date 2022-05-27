@@ -530,7 +530,7 @@ begin;
   spBone_localToWorld := GetProcedureAddress(Lib, 'spBone_localToWorld');
   spBone_worldToLocal := GetProcedureAddress(Lib, 'spBone_worldToLocal');
   spBone_worldToLocalRotationX := GetProcedureAddress(Lib, 'spBone_worldToLocalRotationX');
-  spBone_updateWorldTransform :=  GetProcedureAddress(Lib, 'spBone_getWorldScaleY');
+  spBone_updateWorldTransform :=  GetProcedureAddress(Lib, 'spBone_updateWorldTransform');
 
   // Animation
   spAnimationStateData_create := GetProcedureAddress(Lib, 'spAnimationStateData_create');
