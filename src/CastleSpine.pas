@@ -644,9 +644,6 @@ begin
   if (PropertyName = 'ExposeTransforms') then
     Result := [psBasic]
   else
-  if (PropertyName = 'ExposeTransforms') then
-    Result := []
-  else
     Result := inherited PropertySections(PropertyName);
 end;
 {$endif}
