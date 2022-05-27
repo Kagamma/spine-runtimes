@@ -55,7 +55,7 @@ type
 
   TCastleSpineOverrideBoneData = record
     Bone: PspBone;
-    X, Y: Single;
+    X, Y, Rotation: Single;
   end;
   TCastleSpineOverrideBoneDataList = specialize TList<TCastleSpineOverrideBoneData>;
 
@@ -78,15 +78,21 @@ type
   private
     FOverrideBoneData: Boolean;
     FOldTranslation: TVector3;
+    FOldRotation: Single;
     FOldData: TCastleSpineOverrideBoneData;
+    FIsRefreshBone: Boolean;
   public
-    Bone: PspBone;
+    FBone: PspBone;
+    FOldBone: TspBone;
     {$ifdef CASTLE_DESIGN_MODE}
     function PropertySections(const PropertyName: String): TPropertySections; override;
     {$endif}
+    procedure SetBone(const V: PspBone);
+    procedure SetOverrideBoneData(const V: Boolean);
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
+    property Bone: PspBone read FBone write SetBone;
   published
-    property OverrideBoneData: Boolean read FOverrideBoneData write FOverrideBoneData default False;
+    property OverrideBoneData: Boolean read FOverrideBoneData write SetOverrideBoneData default False;
   end;
 
   TCastleSpine = class(TCastleSceneCore)
@@ -300,24 +306,50 @@ begin
 end;
 {$endif}
 
+procedure TCastleSpineTransformBehavior.SetBone(const V: PspBone);
+begin
+  Self.FBone := V;
+  Self.FOldBone := V^;
+  Self.FIsRefreshBone := True;
+end;
+
+procedure TCastleSpineTransformBehavior.SetOverrideBoneData(const V: Boolean);
+begin
+  Self.FOverrideBoneData := V;
+  Self.FIsRefreshBone := V;
+end;
+
 procedure TCastleSpineTransformBehavior.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
 var
   V: TVector4;
   D: TCastleSpineOverrideBoneData;
-begin
-  inherited;
-  if Bone = nil then Exit;
-  if not Self.FOverrideBoneData then
+
+  procedure UpdateParentPosition; inline;
   begin
     Self.Parent.Translation := Vector3(Self.Bone^.worldX, Self.Bone^.worldY, 0);
     Self.Parent.Rotation := Vector4(0, 0, 1, spBone_getWorldRotationX(Self.Bone) * 0.017453);
     Self.Parent.Scale := Vector3(spBone_getWorldScaleX(Bone), spBone_getWorldScaleY(Bone), 1);
+  end;
+
+begin
+  inherited;
+  if Bone = nil then Exit;
+  if Self.FIsRefreshBone then
+  begin
+    Self.FBone^ := Self.FOldBone;
+    Self.FIsRefreshBone := False;
+  end;
+  if not Self.FOverrideBoneData then
+  begin
+    UpdateParentPosition;
   end else
   begin
-    if (Self.FOldTranslation.X <> Self.Parent.Translation.X) or (Self.FOldTranslation.Y <> Self.Parent.Translation.Y) then
+    Self.FBone^ := Self.FOldBone;
+    if (Self.FOldTranslation.X <> Self.Parent.Translation.X) or (Self.FOldTranslation.Y <> Self.Parent.Translation.Y) or (Self.FOldRotation <> Self.Parent.Rotation.W) then
     begin
-      V := Self.Parent.Parent.WorldInverseTransform * (Self.Parent.WorldTransform * Vector4(Self.Parent.Translation, 1.0));
+      V := Self.Parent.Parent.WorldInverseTransform * (Self.Parent.WorldTransform * Vector4(Self.Parent.Translation, 1.0)) / 2;
       spBone_worldToLocal(Bone, V.X, V.Y, @D.X, @D.Y);
+      D.Rotation := spBone_getWorldRotationX(Self.Bone) + (Self.Parent.Rotation.W * 57.29578);
       D.Bone := Bone;
       Self.FOldData := D;
     end;
@@ -325,6 +357,7 @@ begin
       TCastleSpine(Self.Parent.Parent).OverrideBoneDataList.Add(Self.FOldData);
   end;
   Self.FOldTranslation := Self.Parent.Translation;
+  Self.FOldRotation := Self.Parent.Rotation.W;
 end;
 
 { ----- TExposeTransformsPropertyEditor ----- }
@@ -768,6 +801,7 @@ begin
           begin
             D.Bone^.x := D.X;
             D.Bone^.y := D.Y;
+            D.Bone^.rotation := D.Rotation;
           end;
         end;
         spSkeleton_updateWorldTransform(Self.FspSkeleton);
