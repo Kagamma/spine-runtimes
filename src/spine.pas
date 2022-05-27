@@ -427,6 +427,7 @@ var
   spSkeletonData_dispose: procedure(SkeletonData: PspSkeletonData); SPINECALL;
   spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
+  spSkeleton_setToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
 
   // Bone
   spBone_getWorldRotationX: function(Bone: PspBone): cfloat; SPINECALL;
@@ -521,6 +522,7 @@ begin;
   spSkeletonData_dispose := GetProcedureAddress(Lib, 'spSkeletonData_dispose');
   spSkeleton_updateWorldTransform := GetProcedureAddress(Lib, 'spSkeleton_updateWorldTransform');
   spSkeleton_findBone := GetProcedureAddress(Lib, 'spSkeleton_findBone');
+  spSkeleton_setToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setToSetupPose');
 
   // Bone
   spBone_getWorldRotationX := GetProcedureAddress(Lib, 'spBone_getWorldRotationX');

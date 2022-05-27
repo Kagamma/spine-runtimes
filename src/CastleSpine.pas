@@ -516,6 +516,7 @@ begin
 
   // Create skeleton
   Self.FspSkeleton := spSkeleton_create(SpineData^.SkeletonData);
+  spSkeleton_setToSetupPose(Self.FspSkeleton);
 
   // Create boundingbox
   Self.FspSkeletonBounds := spSkeletonBounds_create();
