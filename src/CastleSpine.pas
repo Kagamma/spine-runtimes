@@ -257,11 +257,13 @@ begin
   Result.InternalDefaultValue := ADefaultValue;
 end;
 
+{ Naive implementation of util function that takes a bone name and convert to valid component name }
 function ValidName(const S: String): String;
 begin
   Result := StringsReplace(S, [' ', '-'], ['_', '_'], [rfReplaceAll]);
 end;
 
+{ Trigger when an Spine event is fired. CurrentSpineInstance is the instance where the event belong to }
 procedure EventListener(State: PspAnimationState; Typ: TSpEventType; Entry: PspTrackEntry; Event: PspEvent); cdecl;
 begin
   if (CurrentSpineInstance <> nil) and (CurrentSpineInstance.OnEventNotify <> nil) then
