@@ -53,6 +53,12 @@ type
     Color: TVector4;
   end;
 
+  TCastleSpineOverrideBoneData = record
+    Bone: PspBone;
+    X, Y: Single;
+  end;
+  TCastleSpineOverrideBoneDataList = specialize TList<TCastleSpineOverrideBoneData>;
+
   PCastleSpineData = ^TCastleSpineData;
   TCastleSpineData = record
     Atlas: PspAtlas;
@@ -66,6 +72,21 @@ type
   public
     // Clear the cache
     procedure Clear; override;
+  end;
+
+  TCastleSpineTransformBehavior = class(TCastleBehavior)
+  private
+    FOverrideBoneData: Boolean;
+    FOldTranslation: TVector3;
+    FOldData: TCastleSpineOverrideBoneData;
+  public
+    Bone: PspBone;
+    {$ifdef CASTLE_DESIGN_MODE}
+    function PropertySections(const PropertyName: String): TPropertySections; override;
+    {$endif}
+    procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
+  published
+    property OverrideBoneData: Boolean read FOverrideBoneData write FOverrideBoneData default False;
   end;
 
   TCastleSpine = class(TCastleSceneCore)
@@ -96,6 +117,7 @@ type
     FExposeTransformsPrefix: String;
     FColorPersistent: TCastleColorPersistent;
     FOnEventNotify: TCastleSpineEventNotify; // Used by Spine's events
+    FOverrideBoneDataList: TCastleSpineOverrideBoneDataList;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -127,6 +149,7 @@ type
     procedure StopAnimation(const Track: Integer = -1); overload;
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
+    property OverrideBoneDataList: TCastleSpineOverrideBoneDataList read FOverrideBoneDataList;
   published
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
@@ -185,19 +208,13 @@ const
 '  }'nl
 '}';
 
+{$ifdef CASTLE_DESIGN_MODE}
 type
-  TCastleSpineTransformBehavior = class(TCastleBehavior)
-  public
-    Bone: PspBone;
-    procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
-  end;
-
-  {$ifdef CASTLE_DESIGN_MODE}
   TExposeTransformsPropertyEditor = class(TStringsPropertyEditor)
   public
     procedure Edit; override;
   end;
-  {$endif}
+{$endif}
 
 var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
@@ -272,13 +289,42 @@ end;
 
 { ----- TCastleSpineTransformBehavior ----- }
 
+{$ifdef CASTLE_DESIGN_MODE}
+function TCastleSpineTransformBehavior.PropertySections(
+  const PropertyName: String): TPropertySections;
+begin
+  if (PropertyName = 'OverrideBoneData') then
+    Result := [psBasic]
+  else
+    Result := inherited PropertySections(PropertyName);
+end;
+{$endif}
+
 procedure TCastleSpineTransformBehavior.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
+var
+  V: TVector4;
+  D: TCastleSpineOverrideBoneData;
 begin
   inherited;
   if Bone = nil then Exit;
-  Self.Parent.Translation := Vector3(Self.Bone^.worldX, Self.Bone^.worldY, 0);
-  Self.Parent.Rotation := Vector4(0, 0, 1, spBone_getWorldRotationX(Self.Bone) * 0.017453);
-  Self.Parent.Scale := Vector3(spBone_getWorldScaleX(Bone), spBone_getWorldScaleY(Bone), 1);
+  if not Self.FOverrideBoneData then
+  begin
+    Self.Parent.Translation := Vector3(Self.Bone^.worldX, Self.Bone^.worldY, 0);
+    Self.Parent.Rotation := Vector4(0, 0, 1, spBone_getWorldRotationX(Self.Bone) * 0.017453);
+    Self.Parent.Scale := Vector3(spBone_getWorldScaleX(Bone), spBone_getWorldScaleY(Bone), 1);
+  end else
+  begin
+    if (Self.FOldTranslation.X <> Self.Parent.Translation.X) or (Self.FOldTranslation.Y <> Self.Parent.Translation.Y) then
+    begin
+      V := Self.Parent.Parent.WorldInverseTransform * (Self.Parent.WorldTransform * Vector4(Self.Parent.Translation, 1.0));
+      spBone_worldToLocal(Bone, V.X, V.Y, @D.X, @D.Y);
+      D.Bone := Bone;
+      Self.FOldData := D;
+    end;
+    if Self.FOldData.Bone <> nil then
+      TCastleSpine(Self.Parent.Parent).OverrideBoneDataList.Add(Self.FOldData);
+  end;
+  Self.FOldTranslation := Self.Parent.Translation;
 end;
 
 { ----- TExposeTransformsPropertyEditor ----- }
@@ -640,6 +686,7 @@ begin
   Self.FParameters := TPlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
   Self.FExposeTransforms := TStringList.Create;
+  Self.FOverrideBoneDataList := TCastleSpineOverrideBoneDataList.Create;
   TStringList(Self.FExposeTransforms).OnChange := @Self.ExposeTransformsChange;
   Self.FColorPersistent := CreateColorPersistent(
     @Self.GetColorForPersistent,
@@ -654,6 +701,7 @@ begin
   Self.FParameters.Free;
   Self.FColorPersistent.Free;
   Self.FExposeTransforms.Free;
+  Self.FOverrideBoneDataList.Free;
   inherited;
 end;
 
@@ -677,6 +725,7 @@ end;
 procedure TCastleSpine.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
 var
   F: Single;
+  D: TCastleSpineOverrideBoneData;
 begin
   inherited;
   CurrentSpineInstance := Self;
@@ -702,14 +751,27 @@ begin
       F := SecondsPassed;
     Inc(Self.FTicks);
     Self.FSecondsPassedAcc := Self.FSecondsPassedAcc + F;
-    if Self.FIsAnimationPlaying and Self.ProcessEvents then
+    if Self.ProcessEvents then
     begin
       if (Self.FTicks > Self.AnimateSkipTicks) and ((Self.AnimateOnlyWhenVisible and Self.Visible) or (not Self.AnimateOnlyWhenVisible)) then
       begin
-        spAnimationState_update(Self.FspAnimationState, Self.FSecondsPassedAcc);
-        spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
+        if Self.FIsAnimationPlaying then
+        begin
+          spAnimationState_update(Self.FspAnimationState, Self.FSecondsPassedAcc);
+          spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
+        end;
+        // Override bone values
+        if Self.FOverrideBoneDataList.Count > 0 then
+        begin
+          for D in Self.FOverrideBoneDataList do
+          begin
+            D.Bone^.x := D.X;
+            D.Bone^.y := D.Y;
+          end;
+        end;
         spSkeleton_updateWorldTransform(Self.FspSkeleton);
         spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
+        Self.FOverrideBoneDataList.Clear;
         Self.FTicks := 0;
         Self.FSecondsPassedAcc := 0;
       end;

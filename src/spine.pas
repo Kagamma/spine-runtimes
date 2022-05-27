@@ -426,13 +426,17 @@ var
   spSkeleton_dispose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeletonData_dispose: procedure(SkeletonData: PspSkeletonData); SPINECALL;
   spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
-  spSkeleton_findBone: function(SkeletonData: PspSkeletonData; Name: PChar): PspBone; SPINECALL;
+  spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
 
   // Bone
   spBone_getWorldRotationX: function(Bone: PspBone): cfloat; SPINECALL;
   spBone_getWorldRotationY: function(Bone: PspBone): cfloat; SPINECALL;
   spBone_getWorldScaleX: function(Bone: PspBone): cfloat; SPINECALL;
   spBone_getWorldScaleY: function(Bone: PspBone): cfloat; SPINECALL;
+  spBone_localToWorld: procedure(Bone: PspBone; LocalX, LocalY: cfloat; WorldX, WorldY: pcfloat); SPINECALL;
+  spBone_worldToLocal: procedure(Bone: PspBone; WorldX, WorldY: cfloat; LocalX, LocalY: pcfloat); SPINECALL;
+  spBone_worldToLocalRotationX: function(Bone: PspBone): cfloat; SPINECALL;
+  spBone_updateWorldTransform: procedure(Bone: PspBone); SPINECALL;
 
   // Animation
   spAnimationStateData_create: function(SkeletonData: PspSkeletonData): PspAnimationStateData; SPINECALL;
@@ -523,6 +527,10 @@ begin;
   spBone_getWorldRotationY := GetProcedureAddress(Lib, 'spBone_getWorldRotationY');
   spBone_getWorldScaleX := GetProcedureAddress(Lib, 'spBone_getWorldScaleX');
   spBone_getWorldScaleY := GetProcedureAddress(Lib, 'spBone_getWorldScaleY');
+  spBone_localToWorld := GetProcedureAddress(Lib, 'spBone_localToWorld');
+  spBone_worldToLocal := GetProcedureAddress(Lib, 'spBone_worldToLocal');
+  spBone_worldToLocalRotationX := GetProcedureAddress(Lib, 'spBone_worldToLocalRotationX');
+  spBone_updateWorldTransform :=  GetProcedureAddress(Lib, 'spBone_getWorldScaleY');
 
   // Animation
   spAnimationStateData_create := GetProcedureAddress(Lib, 'spAnimationStateData_create');
