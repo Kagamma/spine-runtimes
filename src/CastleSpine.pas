@@ -133,6 +133,9 @@ type
     property ExposeTransformsPrefix: String read FExposeTransformsPrefix write SetExposeTransformsPrefix;
   end;
 
+var
+  SpineDataCache: TCastleSpineDataCache;
+
 implementation
 
 const
@@ -194,7 +197,6 @@ var
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
   RenderProgram: TGLSLProgram;
   VBO: GLuint;
-  SpineDataCache: TCastleSpineDataCache;
   RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
 
 { Provide loader functions for Spine }
