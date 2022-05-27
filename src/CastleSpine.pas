@@ -702,29 +702,6 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
         Continue;
       end;
 
-      // Blend mode
-      if Integer(Slot^.data^.blendMode) <> PreviousBlendMode then
-      begin
-        if Self.FSpineData^.Atlas^.pages^.pma <> 0 then
-        begin
-          case Slot^.data^.blendMode of
-            SP_BLEND_MODE_ADDITIVE:
-              glBlendFunc(GL_ONE, GL_ONE);
-            else
-              glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-          end;
-        end else
-        begin
-          case Slot^.data^.blendMode of
-            SP_BLEND_MODE_ADDITIVE:
-              glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-            else
-              glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-          end;
-        end;
-        PreviousBlendMode := Integer(Slot^.data^.blendMode);
-      end;
-
       case Attachment^.type_ of
         SP_ATTACHMENT_REGION:
           begin
@@ -781,7 +758,32 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
 
       // Flush the current pipeline if material change
       if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
+      begin
+        // Blend mode
+        if Integer(Slot^.data^.blendMode) <> PreviousBlendMode then
+        begin
+          if Self.FSpineData^.Atlas^.pages^.pma <> 0 then
+          begin
+            case Slot^.data^.blendMode of
+              SP_BLEND_MODE_ADDITIVE:
+                glBlendFunc(GL_ONE, GL_ONE);
+              else
+                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+            end;
+          end else
+          begin
+            case Slot^.data^.blendMode of
+              SP_BLEND_MODE_ADDITIVE:
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+              else
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            end;
+          end;
+        end;
         Render;
+        PreviousBlendMode := Integer(Slot^.data^.blendMode);
+        PreviousImage := Image;
+      end;
 
       Color := Vector4(
         Skeleton^.color.r * Slot^.color.r * AttachmentColor.r,
@@ -810,10 +812,10 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
             Color, TotalVertexCount);
       end;
 
-			spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
+      spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
     end;
     Render;
-		spSkeletonClipping_clipEnd2(Self.FspClipper);
+    spSkeletonClipping_clipEnd2(Self.FspClipper);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);

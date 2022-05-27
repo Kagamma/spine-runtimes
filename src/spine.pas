@@ -135,7 +135,7 @@ type
     count: cint;
     boundingBoxes: ^PspBoundingBoxAttachment;
     polygons: ^PspPolygon;
-	  minX, minY, maxX, maxY: cfloat;
+    minX, minY, maxX, maxY: cfloat;
   end;
 
   PspAnimation = ^TspAnimation;
