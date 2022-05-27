@@ -95,7 +95,7 @@ type
     FExposeTransforms: TStrings;
     FExposeTransformsPrefix: String;
     FColorPersistent: TCastleColorPersistent;
-    FOnEventNotify: TCastleSpineEventNotify;
+    FOnEventNotify: TCastleSpineEventNotify; // Used by Spine's events
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -127,7 +127,6 @@ type
     procedure StopAnimation(const Track: Integer = -1); overload;
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
-    property OnEventNotify: TCastleSpineEventNotify read FOnEventNotify write FOnEventNotify;
   published
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
@@ -138,6 +137,7 @@ type
     property DistanceCulling: Single read FDistanceCulling write FDistanceCulling default 0;
     property ExposeTransforms: TStrings read FExposeTransforms write SetExposeTransforms;
     property ExposeTransformsPrefix: String read FExposeTransformsPrefix write SetExposeTransformsPrefix;
+    property OnEventNotify: TCastleSpineEventNotify read FOnEventNotify write FOnEventNotify;
   end;
 
 var
@@ -266,7 +266,6 @@ procedure EventListener(State: PspAnimationState; Typ: TSpEventType; Entry: PspT
 begin
   if (CurrentSpineInstance <> nil) and (CurrentSpineInstance.OnEventNotify <> nil) then
     CurrentSpineInstance.OnEventNotify(State, Typ, Entry, Event);
-  Writeln(Entry^.animation^.name, ', ', Typ);
 end;
 
 { ----- TCastleSpineTransformBehavior ----- }

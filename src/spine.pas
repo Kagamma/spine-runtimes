@@ -116,7 +116,6 @@ type
   end;
 
   PspSkin = Pointer;
-  PspEventData = Pointer;
   PspTimelineArray = Pointer;
   PspPropertyIdArray = Pointer;
   PspBoundingBoxAttachment = Pointer;
@@ -128,6 +127,7 @@ type
   PspEvent = ^TspEvent;
   PspAnimationState = ^TspAnimationState;
   PspAnimationStateListener = Pointer;
+  PspEventData = ^TspEventData;
 
   PspSkeletonClipping = ^TspSkeletonClipping;
   TspSkeletonClipping = record
@@ -371,7 +371,7 @@ type
   TspTrackEntry = record
     animation: PspAnimation;
     previous, next, mixingFrom, mixingTo: PspTrackEntry;
-    listener: TspAnimationStateListener;
+    listener: Pointer;
     trackIndex: cint;
     loop, holdPrevious, reverse: cint;
     eventThreshold, attachmentThreshold, drawOrderThreshold: cfloat;
@@ -387,6 +387,16 @@ type
     intValue: cint;
     floatValue: cfloat;
     stringValue: PChar;
+    volume: cfloat;
+    balance: cfloat;
+  end;
+
+  TspEventData = record
+    name: PChar;
+    intValue: cint;
+    floatValue: cfloat;
+    stringValue: PChar;
+    audioPath: PChar;
     volume: cfloat;
     balance: cfloat;
   end;
