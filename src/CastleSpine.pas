@@ -44,7 +44,14 @@ uses
   CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors;
 
 type
-  TCastleSpineEventNotify = procedure(State: PspAnimationState; Typ: TSpEventType; Entry: PspTrackEntry; Event: PspEvent) of object;
+  TCastleSpineEvent = record
+    State: PspAnimationState;
+    Typ: TSpEventType;
+    Entry: PspTrackEntry;
+    Event: PspEvent;
+  end;
+
+  TCastleSpineEventNotify = procedure(const Event: TCastleSpineEvent) of object;
 
   PCastleSpineVertex = ^TCastleSpineVertex;
   TCastleSpineVertex = packed record
@@ -288,9 +295,17 @@ end;
 
 { Trigger when an Spine event is fired. CurrentSpineInstance is the instance where the event belong to }
 procedure EventListener(State: PspAnimationState; Typ: TSpEventType; Entry: PspTrackEntry; Event: PspEvent); cdecl;
+var
+  E: TCastleSpineEvent;
 begin
   if (CurrentSpineInstance <> nil) and (CurrentSpineInstance.OnEventNotify <> nil) then
-    CurrentSpineInstance.OnEventNotify(State, Typ, Entry, Event);
+  begin
+    E.State := State;
+    E.Typ := Typ;
+    E.Entry := Entry;
+    E.Event := Event;
+    CurrentSpineInstance.OnEventNotify(E);
+  end;
 end;
 
 { ----- TCastleSpineTransformBehavior ----- }
