@@ -60,11 +60,11 @@ type
     Color: TVector4;
   end;
 
-  TCastleSpineOverrideBoneData = record
+  TCastleSpineControlBone = record
     Bone: PspBone;
     X, Y, Rotation: Single;
   end;
-  TCastleSpineOverrideBoneDataList = specialize TList<TCastleSpineOverrideBoneData>;
+  TCastleSpineControlBoneList = specialize TList<TCastleSpineControlBone>;
 
   PCastleSpineData = ^TCastleSpineData;
   TCastleSpineData = record
@@ -83,22 +83,22 @@ type
 
   TCastleSpineTransformBehavior = class(TCastleBehavior)
   private
-    FOverrideBoneData: Boolean;
+    FControlBone: Boolean;
     FOldTranslation: TVector3;
     FOldRotation: Single;
-    FOldData: TCastleSpineOverrideBoneData;
+    FOldData: TCastleSpineControlBone;
     FBone: PspBone;
     FBoneDefault: PspBone;
   public
     {$ifdef CASTLE_DESIGN_MODE}
     function PropertySections(const PropertyName: String): TPropertySections; override;
     {$endif}
-    procedure SetOverrideBoneData(const V: Boolean);
+    procedure SetControlBone(const V: Boolean);
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     property Bone: PspBone read FBone write FBone;
     property BoneDefault: PspBone read FBoneDefault write FBoneDefault;
   published
-    property OverrideBoneData: Boolean read FOverrideBoneData write SetOverrideBoneData default False;
+    property ControlBone: Boolean read FControlBone write SetControlBone default False;
   end;
 
   TCastleSpine = class(TCastleSceneCore)
@@ -130,7 +130,7 @@ type
     FExposeTransformsPrefix: String;
     FColorPersistent: TCastleColorPersistent;
     FOnEventNotify: TCastleSpineEventNotify; // Used by Spine's events
-    FOverrideBoneDataList: TCastleSpineOverrideBoneDataList;
+    FControlBoneList: TCastleSpineControlBoneList;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -162,7 +162,7 @@ type
     procedure StopAnimation(const Track: Integer = -1); overload;
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
-    property OverrideBoneDataList: TCastleSpineOverrideBoneDataList read FOverrideBoneDataList;
+    property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
   published
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
@@ -314,23 +314,23 @@ end;
 function TCastleSpineTransformBehavior.PropertySections(
   const PropertyName: String): TPropertySections;
 begin
-  if (PropertyName = 'OverrideBoneData') then
+  if (PropertyName = 'ControlBone') then
     Result := [psBasic]
   else
     Result := inherited PropertySections(PropertyName);
 end;
 {$endif}
 
-procedure TCastleSpineTransformBehavior.SetOverrideBoneData(const V: Boolean);
+procedure TCastleSpineTransformBehavior.SetControlBone(const V: Boolean);
 begin
-  Self.FOverrideBoneData := V;
+  Self.FControlBone := V;
   Self.FOldTranslation := TVector3.Zero;
 end;
 
 procedure TCastleSpineTransformBehavior.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
 var
   V: TVector4;
-  D: TCastleSpineOverrideBoneData;
+  D: TCastleSpineControlBone;
 
   procedure UpdateParentPosition; inline;
   begin
@@ -342,7 +342,7 @@ var
 begin
   inherited;
   if Bone = nil then Exit;
-  if not Self.FOverrideBoneData then
+  if not Self.FControlBone then
   begin
     UpdateParentPosition;
   end else
@@ -360,7 +360,7 @@ begin
       Self.FOldData := D;
     end;
     if Self.FOldData.Bone <> nil then
-      TCastleSpine(Self.Parent.Parent).OverrideBoneDataList.Add(Self.FOldData);
+      TCastleSpine(Self.Parent.Parent).ControlBoneList.Add(Self.FOldData);
   end;
   Self.FOldTranslation := Self.Parent.Translation;
   Self.FOldRotation := Self.Parent.Rotation.W;
@@ -735,7 +735,7 @@ begin
   Self.FParameters := TPlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
   Self.FExposeTransforms := TStringList.Create;
-  Self.FOverrideBoneDataList := TCastleSpineOverrideBoneDataList.Create;
+  Self.FControlBoneList := TCastleSpineControlBoneList.Create;
   TStringList(Self.FExposeTransforms).OnChange := @Self.ExposeTransformsChange;
   Self.FColorPersistent := CreateColorPersistent(
     @Self.GetColorForPersistent,
@@ -750,7 +750,7 @@ begin
   Self.FParameters.Free;
   Self.FColorPersistent.Free;
   Self.FExposeTransforms.Free;
-  Self.FOverrideBoneDataList.Free;
+  Self.FControlBoneList.Free;
   inherited;
 end;
 
@@ -774,7 +774,7 @@ end;
 procedure TCastleSpine.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
 var
   F: Single;
-  D: TCastleSpineOverrideBoneData;
+  D: TCastleSpineControlBone;
 begin
   inherited;
   CurrentSpineInstance := Self;
@@ -810,9 +810,9 @@ begin
           spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
         end;
         // Override bone values
-        if Self.FOverrideBoneDataList.Count > 0 then
+        if Self.FControlBoneList.Count > 0 then
         begin
-          for D in Self.FOverrideBoneDataList do
+          for D in Self.FControlBoneList do
           begin
             D.Bone^.x := D.X;
             D.Bone^.y := D.Y;
@@ -821,7 +821,7 @@ begin
         end;
         spSkeleton_updateWorldTransform(Self.FspSkeleton);
         spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
-        Self.FOverrideBoneDataList.Clear;
+        Self.FControlBoneList.Clear;
         Self.FTicks := 0;
         Self.FSecondsPassedAcc := 0;
       end;
