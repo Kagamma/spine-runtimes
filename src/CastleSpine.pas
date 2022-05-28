@@ -87,17 +87,16 @@ type
     FOldTranslation: TVector3;
     FOldRotation: Single;
     FOldData: TCastleSpineOverrideBoneData;
-    FIsRefreshBone: Boolean;
-  public
     FBone: PspBone;
-    FOldBone: TspBone;
+    FBoneDefault: PspBone;
+  public
     {$ifdef CASTLE_DESIGN_MODE}
     function PropertySections(const PropertyName: String): TPropertySections; override;
     {$endif}
-    procedure SetBone(const V: PspBone);
     procedure SetOverrideBoneData(const V: Boolean);
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
-    property Bone: PspBone read FBone write SetBone;
+    property Bone: PspBone read FBone write FBone;
+    property BoneDefault: PspBone read FBoneDefault write FBoneDefault;
   published
     property OverrideBoneData: Boolean read FOverrideBoneData write SetOverrideBoneData default False;
   end;
@@ -110,6 +109,7 @@ type
     FTrack: Integer;
     FIsGLContextInitialized: Boolean;
     FspSkeleton: PspSkeleton;
+    FspSkeletonDefault: array of TspBone;
     FspAnimationState: PspAnimationState;
     FspSkeletonBounds: PspSkeletonBounds;
     FspClipper: PspSkeletonClipping;
@@ -321,17 +321,9 @@ begin
 end;
 {$endif}
 
-procedure TCastleSpineTransformBehavior.SetBone(const V: PspBone);
-begin
-  Self.FBone := V;
-  Self.FOldBone := V^;
-  Self.FIsRefreshBone := True;
-end;
-
 procedure TCastleSpineTransformBehavior.SetOverrideBoneData(const V: Boolean);
 begin
   Self.FOverrideBoneData := V;
-  Self.FIsRefreshBone := V;
 end;
 
 procedure TCastleSpineTransformBehavior.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
@@ -349,22 +341,20 @@ var
 begin
   inherited;
   if Bone = nil then Exit;
-  if Self.FIsRefreshBone then
-  begin
-    Self.FBone^ := Self.FOldBone;
-    Self.FIsRefreshBone := False;
-  end;
   if not Self.FOverrideBoneData then
   begin
     UpdateParentPosition;
   end else
   begin
-    Self.FBone^ := Self.FOldBone;
     if (Self.FOldTranslation.X <> Self.Parent.Translation.X) or (Self.FOldTranslation.Y <> Self.Parent.Translation.Y) or (Self.FOldRotation <> Self.Parent.Rotation.W) then
     begin
-      V := Self.Parent.Parent.WorldInverseTransform * (Self.Parent.WorldTransform * Vector4(Self.Parent.Translation, 1.0)) / 2;
+      Bone^ := Self.FBoneDefault^;
+      // TODO: Correctly handle rotation
+      // TODO: Currently this expects "world", or "root", locate at (0,0)
+      // TODO: Only IKs at root work correctly at the moment
+      V := Self.Parent.Parent.WorldInverseTransform * (Self.Parent.WorldTransform * Vector4(Self.Parent.Translation, 1.0)) * 0.5;
       spBone_worldToLocal(Bone, V.X, V.Y, @D.X, @D.Y);
-      D.Rotation := spBone_getWorldRotationX(Self.Bone) + (Self.Parent.Rotation.W * 57.29578);
+      D.Rotation := Self.Parent.Rotation.W * 57.29578;
       D.Bone := Bone;
       Self.FOldData := D;
     end;
@@ -565,6 +555,9 @@ begin
   // Create skeleton
   Self.FspSkeleton := spSkeleton_create(SpineData^.SkeletonData);
   spSkeleton_setToSetupPose(Self.FspSkeleton);
+  SetLength(Self.FspSkeletonDefault, Self.FspSkeleton^.bonesCount);
+  for I := 0 to Self.FspSkeleton^.bonesCount - 1 do
+    Self.FspSkeletonDefault[I] := Self.FspSkeleton^.bones[I]^;
 
   // Create boundingbox
   Self.FspSkeletonBounds := spSkeletonBounds_create();
@@ -618,7 +611,7 @@ procedure TCastleSpine.InternalExposeTransformsChange;
 var
   T: TCastleTransform;
   B: TCastleSpineTransformBehavior;
-  I, J, K: Integer;
+  I, J, K, L: Integer;
   Bone: PspBone;
   OldTransformList: TCastleTransformList;
   TransformName: String;
@@ -661,6 +654,12 @@ begin
             T.AddBehavior(B);
           end;
           B.Bone := Bone;
+          for L := 0 to Length(Self.FspSkeletonDefault) - 1 do
+            if Self.FspSkeletonDefault[I].data^.name = Bone^.data^.name then
+            begin
+              B.BoneDefault := @Self.FspSkeletonDefault[I];
+              Break;
+            end;
         end;
       end;
     end;
