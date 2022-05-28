@@ -324,6 +324,7 @@ end;
 procedure TCastleSpineTransformBehavior.SetOverrideBoneData(const V: Boolean);
 begin
   Self.FOverrideBoneData := V;
+  Self.FOldTranslation := TVector3.Zero;
 end;
 
 procedure TCastleSpineTransformBehavior.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
