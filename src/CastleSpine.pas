@@ -103,6 +103,7 @@ type
 
   TCastleSpine = class(TCastleSceneCore)
   strict private
+    VBO: GLuint; // Maybe all instances could share the same VBO?
     FURL: String;
     FIsNeedRefreshAnimation: Boolean;
     FParameters: TPlayAnimationParameters;
@@ -233,7 +234,6 @@ var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
   RenderProgram: TGLSLProgram;
-  VBO: GLuint;
   RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
   CurrentSpineInstance: TCastleSpine;
 
