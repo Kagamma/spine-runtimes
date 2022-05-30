@@ -1155,6 +1155,9 @@ procedure TCastleSpine.InternalPlayAnimation;
     Exit(False);
   end;
 
+var
+  TrackEntry: PspTrackEntry;
+
 begin
   if Self.FspAnimationState = nil then Exit;
   CurrentSpineInstance := Self;
@@ -1164,7 +1167,8 @@ begin
     begin
       spAnimationStateData_setMixByName(Self.FSpineData^.AnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
     end;
-    spAnimationState_setAnimationByName(Self.FspAnimationState, Self.FTrack, PChar(Self.FParameters.Name), Self.FParameters.Loop);
+    TrackEntry := spAnimationState_setAnimationByName(Self.FspAnimationState, Self.FTrack, PChar(Self.FParameters.Name), Self.FParameters.Loop);
+    TrackEntry^.reverse := Integer(not Self.FParameters.Forward);
     Self.FPreviousAnimation := Self.FParameters.Name;
   end;
   Self.FIsNeedRefreshAnimation := False;
