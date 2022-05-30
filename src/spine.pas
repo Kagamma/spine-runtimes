@@ -73,48 +73,12 @@ type
   );
   {$packenum 1}
 
-  TspColor = record
-    r, g, b, a: cfloat;
-  end;
-  PspColor = ^TspColor;
-
   PspFloatArray = ^TspFloatArray;
-  TspFloatArray = record
-    size: cint;
-    capacity: cint;
-    items: pcfloat;
-  end;
-
   PspUnsignedShortArray = ^TspUnsignedShortArray;
-  TspUnsignedShortArray = record
-    size: cint;
-    capacity: cint;
-    items: pcushort;
-  end;
-
   PspKeyValueArray = Pointer;
-
   PspAttachmentLoader = Pointer;
-
   PspSkeletonJson = ^TspSkeletonJson;
-  TspSkeletonJson = record
-    scale: cfloat;
-    attachmentLoader: PspAttachmentLoader;
-    error: PChar;
-  end;
-
   PspBoneData = ^TspBoneData;
-  TspBoneData = record
-    index_: cint;
-    name: PChar;
-    parent: PspBoneData;
-    length: cfloat;
-    x, y, rotation, scaleX, scaleY, shearX, shearY: cfloat;
-    transformMode: TspTransformMode;
-    skinRequired: cbool;
-    color: TspColor;
-  end;
-
   PspSkin = Pointer;
   PspTimelineArray = Pointer;
   PspPropertyIdArray = Pointer;
@@ -128,6 +92,62 @@ type
   PspAnimationState = ^TspAnimationState;
   PspAnimationStateListener = Pointer;
   PspEventData = ^TspEventData;
+  PspSkeletonBounds = ^TspSkeletonBounds;
+  PspAnimation = ^TspAnimation;
+  PspIkConstraintData = Pointer;
+  PspTransformConstraintData = Pointer;
+  PspPathConstraintData = Pointer;
+  PspSkeletonData = ^TspSkeletonData;
+  PspRegionAttachment = ^TspRegionAttachment;
+  PspAtlas = ^TspAtlas;
+  PspAtlasPage = ^TspAtlasPage;
+  PspAtlasRegion = ^TspAtlasRegion;
+  PspBone = ^TspBone;
+  PPspBone = ^PspBone;
+  PspIkConstraint = Pointer;
+  PPspIkConstraint = ^PspIkConstraint;
+  PspTransformConstraint = Pointer;
+  PPspTransformConstraint = ^PspTransformConstraint;
+  PspPathConstraint = Pointer;
+  PPspPathConstraint = ^PspPathConstraint;
+  PspSlot = ^TspSlot;
+  PPspSlot = ^PspSlot;
+  PspVertexAttachment = ^TspVertexAttachment;
+  PspMeshAttachment = ^TspMeshAttachment;
+
+  TspColor = record
+    r, g, b, a: cfloat;
+  end;
+  PspColor = ^TspColor;
+
+  TspFloatArray = record
+    size: cint;
+    capacity: cint;
+    items: pcfloat;
+  end;
+
+  TspUnsignedShortArray = record
+    size: cint;
+    capacity: cint;
+    items: pcushort;
+  end;
+
+  TspSkeletonJson = record
+    scale: cfloat;
+    attachmentLoader: PspAttachmentLoader;
+    error: PChar;
+  end;
+
+  TspBoneData = record
+    index_: cint;
+    name: PChar;
+    parent: PspBoneData;
+    length: cfloat;
+    x, y, rotation, scaleX, scaleY, shearX, shearY: cfloat;
+    transformMode: TspTransformMode;
+    skinRequired: cbool;
+    color: TspColor;
+  end;
 
   PspSkeletonClipping = ^TspSkeletonClipping;
   TspSkeletonClipping = record
@@ -142,7 +162,6 @@ type
     clippingPolygons: ^PspFloatArray;
   end;
 
-  PspSkeletonBounds = ^TspSkeletonBounds;
   TspSkeletonBounds = record
     count: cint;
     boundingBoxes: ^PspBoundingBoxAttachment;
@@ -150,17 +169,12 @@ type
     minX, minY, maxX, maxY: cfloat;
   end;
 
-  PspAnimation = ^TspAnimation;
   TspAnimation = record
     name: PChar;
     duration: cfloat;
     timelines: PspTimelineArray;
     timelineIds: PspPropertyIdArray;
   end;
-
-  PspIkConstraintData = Pointer;
-  PspTransformConstraintData = Pointer;
-  PspPathConstraintData = Pointer;
 
   TspSlotData = record
     index_: cint;
@@ -173,7 +187,6 @@ type
   end;
   PspSlotData = ^TspSlotData;
 
-  PspSkeletonData = ^TspSkeletonData;
   TspSkeletonData = record
     version: PChar;
     hash: PChar;
@@ -235,11 +248,7 @@ type
     offset: array[0..7] of cfloat;
     uvs: array[0..7] of cfloat;
   end;
-  PspRegionAttachment = ^TspRegionAttachment;
 
-  PspAtlas = ^TspAtlas;
-
-  PspAtlasPage = ^TspAtlasPage;
   TspAtlasPage = record
     atlas: PspAtlas;
     name: PChar;
@@ -252,7 +261,6 @@ type
     next: PspAtlasPage;
   end;
 
-  PspAtlasRegion = ^TspAtlasRegion;
   TspAtlasRegion = record
     name: PChar;
     x, y, width, height: cint;
@@ -274,8 +282,6 @@ type
     rendererObject: Pointer;
   end;
 
-  PspBone = ^TspBone;
-  PPspBone = ^PspBone;
   TspBone = record
     data: PspBoneData;
     skeleton: PspSkeleton;
@@ -290,15 +296,6 @@ type
     active: cbool;
   end;
 
-  PspIkConstraint = Pointer;
-  PPspIkConstraint = ^PspIkConstraint;
-
-  PspTransformConstraint = Pointer;
-  PPspTransformConstraint = ^PspTransformConstraint;
-
-  PspPathConstraint = Pointer;
-  PPspPathConstraint = ^PspPathConstraint;
-
   TspSlot = record
     data: PspSlotData;
     bone: PspBone;
@@ -307,8 +304,6 @@ type
     attachment: PspAttachment;
     attachmentState: cint;
   end;
-  PspSlot = ^TspSlot;
-  PPspSlot = ^PspSlot;
 
   TspSkeleton = record
     data: PspSkeletonData;
@@ -334,7 +329,6 @@ type
     x, y: cfloat;
   end;
 
-  PspVertexAttachment = ^TspVertexAttachment;
   TspVertexAttachment = record
     super: TspAttachment;
     bonesCount: cint;
@@ -346,7 +340,6 @@ type
     id: cint;
   end;
 
-  PspMeshAttachment = ^TspMeshAttachment;
   TspMeshAttachment = record
     super: TspVertexAttachment;
     rendererObject: Pointer;
