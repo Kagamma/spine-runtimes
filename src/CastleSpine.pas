@@ -190,7 +190,7 @@ const
 
 'varying vec2 fragTexCoord;'nl
 'varying vec4 fragColor;'nl
-'varying vec4 fragFogCoord;'nl
+'varying float fragFogCoord;'nl
 
 'uniform mat4 mvMatrix;'nl
 'uniform mat4 pMatrix;'nl
@@ -206,7 +206,7 @@ const
   FragmentShaderSource: String =
 'varying vec2 fragTexCoord;'nl
 'varying vec4 fragColor;'nl
-'varying vec4 fragFogCoord;'nl
+'varying float fragFogCoord;'nl
 
 'uniform sampler2D baseColor;'nl
 'uniform int fogEnable;'nl
