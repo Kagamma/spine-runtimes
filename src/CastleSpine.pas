@@ -46,7 +46,7 @@ uses
 type
   TCastleSpineEvent = record
     State: PspAnimationState;
-    Typ: TSpEventType;
+    EventType: TSpEventType;
     Entry: PspTrackEntry;
     Event: PspEvent;
   end;
@@ -301,7 +301,7 @@ begin
   if (CurrentSpineInstance <> nil) and (CurrentSpineInstance.OnEventNotify <> nil) then
   begin
     E.State := State;
-    E.Typ := Typ;
+    E.EventType := Typ;
     E.Entry := Entry;
     E.Event := Event;
     CurrentSpineInstance.OnEventNotify(E);
