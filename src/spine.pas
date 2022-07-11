@@ -451,7 +451,7 @@ var
   spSkeletonBounds_update: procedure(Bounds: PspSkeletonBounds; Skeleton: PspSkeleton; updateAabb: cbool); SPINECALL;
 
   // Attachment
-  spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Bone: PspBone; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
+  spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Slot: PspSlot; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
   spVertexAttachment_computeWorldVertices: procedure(This: PspVertexAttachment; Slot: PspSlot; Start, Count: cint; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
 
   // Clip

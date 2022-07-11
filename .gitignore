@@ -21,6 +21,7 @@ build-win64
 .idea/
 build/
 cmake-build-debug/
+build-*
 .vscode/settings.json
 .vscode
 spine-runtimes.code-workspace
@@ -65,13 +66,6 @@ spine-monogame/example/bin
 spine-monogame/example/obj
 spine-monogame/example/Content/bin/
 spine-monogame/example/Content/obj/
-
-spine-xna/bin
-spine-xna/obj
-spine-xna/example/bin
-spine-xna/example/obj
-spine-xna/example-content/obj/
-spine-xna/.vs/
 
 spine-unity/Assets/spine-csharp*
 !spine-unity/Assets/spine-csharp/Place spine-csharp src here.*
@@ -158,3 +152,23 @@ spine-ts/spine-canvas/dist
 spine-ts/spine-webgl/dist
 spine-ts/spine-player/dist
 spine-ts/spine-threejs/dist
+spine-libgdx/gradle
+spine-libgdx/gradlew
+spine-libgdx/gradlew.bat
+spine-monogame/packages
+spine-monogame/spine-monogame/bin
+spine-monogame/spine-monogame/obj
+spine-monogame/spine-monogame-example/Content/bin
+spine-monogame/spine-monogame-example/Content/obj
+spine-monogame/spine-monogame-example/bin
+spine-monogame/spine-monogame-example/obj
+spine-libgdx/spine-libgdx/out
+spine-libgdx/spine-skeletonviewer/out
+spine-cocos2d-objc/cocos2d/
+cmake-build-release
+spine-cocos2dx/example-v4/build-ios
+spine-cocos2dx/example-v4/build-macos
+spine-cocos2dx/example/build-ios
+spine-cocos2dx/example/proj.android/app/.cxx
+spine-cocos2dx/example/build-win
+spine-cocos2dx/example/build-macos

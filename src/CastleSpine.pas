@@ -922,7 +922,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
               Continue;
             end;
             Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
-            spRegionAttachment_computeWorldVertices(RegionAttachment, Slot^.bone, @WorldVerticesPositions[0], 0, 2);
+            spRegionAttachment_computeWorldVertices(RegionAttachment, Slot, @WorldVerticesPositions[0], 0, 2);
             if PreviousImage = nil then
             begin
               PreviousImage := Image;

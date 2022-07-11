@@ -1,8 +1,8 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated January 1, 2020. Replaces all prior versions.
+ * Last updated September 24, 2021. Replaces all prior versions.
  *
- * Copyright (c) 2013-2020, Esoteric Software LLC
+ * Copyright (c) 2013-2021, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
@@ -27,58 +27,49 @@
  * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef SPINE_VERTEXEFFECT_H_
-#define SPINE_VERTEXEFFECT_H_
+#ifndef SPINE_SEQUENCE_H
+#define SPINE_SEQUENCE_H
 
 #include <spine/dll.h>
-#include <spine/Skeleton.h>
-#include <spine/Color.h>
+#include <spine/TextureRegion.h>
+#include <spine/Atlas.h>
+#include "Attachment.h"
+#include "Slot.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct spVertexEffect;
+_SP_ARRAY_DECLARE_TYPE(spTextureRegionArray, spTextureRegion*)
 
-typedef void (*spVertexEffectBegin)(struct spVertexEffect *self, spSkeleton *skeleton);
+typedef struct spSequence {
+	int id;
+	int start;
+	int digits;
+	int setupIndex;
+	spTextureRegionArray *regions;
+} spSequence;
 
-typedef void (*spVertexEffectTransform)(struct spVertexEffect *self, float *x, float *y, float *u, float *v,
-										spColor *light, spColor *dark);
+SP_API spSequence *spSequence_create(int numRegions);
 
-typedef void (*spVertexEffectEnd)(struct spVertexEffect *self);
+SP_API void spSequence_dispose(spSequence *self);
 
-typedef struct spVertexEffect {
-	spVertexEffectBegin begin;
-	spVertexEffectTransform transform;
-	spVertexEffectEnd end;
-} spVertexEffect;
+SP_API spSequence *spSequence_copy(spSequence *self);
 
-typedef struct spJitterVertexEffect {
-	spVertexEffect super;
-	float jitterX;
-	float jitterY;
-} spJitterVertexEffect;
+SP_API void spSequence_apply(spSequence *self, spSlot *slot, spAttachment *attachment);
 
-typedef struct spSwirlVertexEffect {
-	spVertexEffect super;
-	float centerX;
-	float centerY;
-	float radius;
-	float angle;
-	float worldX;
-	float worldY;
-} spSwirlVertexEffect;
+SP_API void spSequence_getPath(spSequence *self, const char *basePath, int index, char *path);
 
-SP_API spJitterVertexEffect *spJitterVertexEffect_create(float jitterX, float jitterY);
-
-SP_API void spJitterVertexEffect_dispose(spJitterVertexEffect *effect);
-
-SP_API spSwirlVertexEffect *spSwirlVertexEffect_create(float radius);
-
-SP_API void spSwirlVertexEffect_dispose(spSwirlVertexEffect *effect);
+#define SP_SEQUENCE_MODE_HOLD 0
+#define SP_SEQUENCE_MODE_ONCE 1
+#define SP_SEQUENCE_MODE_LOOP 2
+#define SP_SEQUENCE_MODE_PINGPONG 3
+#define SP_SEQUENCE_MODE_ONCEREVERSE 4
+#define SP_SEQUENCE_MODE_LOOPREVERSE 5
+#define SP_SEQUENCE_MODE_PINGPONGREVERSE 6
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* SPINE_VERTEX_EFFECT_H_ */
+#endif

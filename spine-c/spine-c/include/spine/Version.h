@@ -27,17 +27,11 @@
  * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#include <spine/TransformConstraintData.h>
-#include <spine/extension.h>
+#ifndef SPINE_VERTEXEFFECT_H_
+#define SPINE_VERTEXEFFECT_H_
 
-spTransformConstraintData *spTransformConstraintData_create(const char *name) {
-	spTransformConstraintData *self = NEW(spTransformConstraintData);
-	MALLOC_STR(self->name, name);
-	return self;
-}
+#define SPINE_MAJOR_VERSION 4
+#define SPINE_MINOR_VERSION 1
+#define SPINE_VERSION_STRING "4.1"
 
-void spTransformConstraintData_dispose(spTransformConstraintData *self) {
-	FREE(self->name);
-	FREE(self->bones);
-	FREE(self);
-}
+#endif

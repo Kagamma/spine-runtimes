@@ -27,17 +27,24 @@
  * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#include <spine/TransformConstraintData.h>
-#include <spine/extension.h>
+#ifndef SPINE_TEXTURE_REGION_H
+#define SPINE_TEXTURE_REGION_H
 
-spTransformConstraintData *spTransformConstraintData_create(const char *name) {
-	spTransformConstraintData *self = NEW(spTransformConstraintData);
-	MALLOC_STR(self->name, name);
-	return self;
-}
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void spTransformConstraintData_dispose(spTransformConstraintData *self) {
-	FREE(self->name);
-	FREE(self->bones);
-	FREE(self);
+typedef struct spTextureRegion {
+	void *rendererObject;
+	float u, v, u2, v2;
+	int degrees;
+	float offsetX, offsetY;
+	int width, height;
+	int originalWidth, originalHeight;
+} spTextureRegion;
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif
