@@ -49,7 +49,7 @@ type
     Loop: Boolean;
     Forward: Boolean;
     TransitionDuration: Single;
-    InitialTime: Single; // TODO: InitialTime doesn't work at the moment
+    InitialTime: Single;
     Track: Integer;
 
     constructor Create;
