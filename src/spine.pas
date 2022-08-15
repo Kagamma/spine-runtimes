@@ -253,8 +253,8 @@ type
     x, y, scaleX, scaleY, rotation, width, height: cfloat;
     color: TspColor;
     rendererObject: Pointer;
-	  region: PspTextureRegion;
-	  sequence: PspSequence;
+    region: PspTextureRegion;
+    sequence: PspSequence;
     offset: array[0..7] of cfloat;
     uvs: array[0..7] of cfloat;
   end;
@@ -272,7 +272,7 @@ type
   end;
 
   TspAtlasRegion = record
-	  super: TspTextureRegion;
+    super: TspTextureRegion;
     name: PChar;
     x, y: cint;
     index_: cint;

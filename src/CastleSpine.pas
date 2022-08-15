@@ -39,11 +39,22 @@ uses
   PropEdits, CastlePropEdits, CastleDebugTransform, Forms, Controls, Graphics, Dialogs,
   ButtonPanel, StdCtrls, ExtCtrls, CastleInternalExposeTransformsDialog,
   {$endif}
-  CastleVectors, CastleSceneCore, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
+  CastleVectors, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
   CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors;
 
 type
+  TCastleSpinePlayAnimationParameters = class
+    Name: String;
+    Loop: Boolean;
+    Forward: Boolean;
+    TransitionDuration: Single;
+    InitialTime: Single; // TODO: InitialTime doesn't work at the moment
+    Track: Integer;
+
+    constructor Create;
+  end;
+
   TCastleSpineEvent = record
     State: PspAnimationState;
     Typ: TSpEventType;
@@ -106,7 +117,7 @@ type
     VBO: GLuint; // Maybe all instances could share the same VBO?
     FURL: String;
     FIsNeedRefreshAnimation: Boolean;
-    FParameters: TPlayAnimationParameters;
+    FParameters: TCastleSpinePlayAnimationParameters;
     FTrack: Integer;
     FIsGLContextInitialized: Boolean;
     FspSkeleton: PspSkeleton;
@@ -166,7 +177,7 @@ type
     function LocalBoundingBox: TBox3D; override;
     { Similar to PlayAnimation. The Track parameter tell Spine runtime which track we play the animation, allows to mix multiple animations }
     function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true; const Track: Integer = 0): boolean; overload;
-    function PlayAnimation(const Parameters: TPlayAnimationParameters): boolean; overload;
+    function PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean; overload;
     { Similar to StopAnimation. The Track parameter tell Spine runtime which track we stop the animation. If Track = -1, then we stop all animations }
     procedure StopAnimation(const Track: Integer = -1); overload;
     property Color: TVector4 read FColor write FColor;
@@ -331,6 +342,15 @@ begin
     E.Event := Event;
     CurrentSpineInstance.OnEventNotify(E);
   end;
+end;
+
+{ ----- TCastleSpinePlayAnimationParameters ----- }
+
+constructor TCastleSpinePlayAnimationParameters.Create;
+begin
+  inherited;
+  Self.Loop := False;
+  Self.Forward := True;
 end;
 
 { ----- TCastleSpineTransformBehavior ----- }
@@ -785,7 +805,7 @@ begin
   inherited;
   Self.FColor := Vector4(1, 1, 1, 1);
   Self.FSmoothTexture := True;
-  Self.FParameters := TPlayAnimationParameters.Create;
+  Self.FParameters := TCastleSpinePlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
   Self.FExposeTransforms := TStringList.Create;
   Self.FControlBoneList := TCastleSpineControlBoneList.Create;
@@ -824,7 +844,7 @@ end;
 
 procedure TCastleSpine.LoadSpine(const AURL: String);
 begin
-  Self.FURL := AURL; 
+  Self.FURL := AURL;
   Self.FIsNeedRefresh := True;
   if Self.FIsGLContextInitialized then
     Self.InternalLoadSpine;
@@ -1169,12 +1189,14 @@ begin
   Result.Include(inherited LocalBoundingBox);
 end;
 
-function TCastleSpine.PlayAnimation(const Parameters: TPlayAnimationParameters): boolean;
+function TCastleSpine.PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean;
 begin
   Self.FParameters.Name := Parameters.Name;
   Self.FParameters.Loop := Parameters.Loop;
   Self.FParameters.Forward := Parameters.Forward;
   Self.FParameters.TransitionDuration := Parameters.TransitionDuration;
+  Self.FParameters.InitialTime := Parameters.InitialTime;
+  Self.FParameters.Track := Parameters.Track;
   Self.FTrack := 0;
   Self.FIsAnimationPlaying := True;
   Self.FIsNeedRefreshAnimation := True;
@@ -1187,6 +1209,8 @@ begin
   Self.FParameters.Loop := Loop;
   Self.FParameters.Forward := Forward;
   Self.FParameters.TransitionDuration := Self.DefaultAnimationTransition;
+  Self.FParameters.InitialTime := 0;
+  Self.FParameters.Track := Track;
   Self.FTrack := Track;
   Self.FIsAnimationPlaying := True;
   Self.FIsNeedRefreshAnimation := True;
@@ -1228,6 +1252,7 @@ begin
     end;
     TrackEntry := spAnimationState_setAnimationByName(Self.FspAnimationState, Self.FTrack, PChar(Self.FParameters.Name), Self.FParameters.Loop);
     TrackEntry^.reverse := Integer(not Self.FParameters.Forward);
+    TrackEntry^.trackTime := Self.FParameters.Track;
     Self.FPreviousAnimation := Self.FParameters.Name;
   end;
   Self.FIsNeedRefreshAnimation := False;
