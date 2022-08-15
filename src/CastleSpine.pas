@@ -824,8 +824,10 @@ end;
 
 procedure TCastleSpine.LoadSpine(const AURL: String);
 begin
-  Self.FURL := AURL;
+  Self.FURL := AURL; 
   Self.FIsNeedRefresh := True;
+  if Self.FIsGLContextInitialized then
+    Self.InternalLoadSpine;
 end;
 
 procedure TCastleSpine.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
