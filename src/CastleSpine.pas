@@ -244,6 +244,15 @@ type
   public
     procedure Edit; override;
   end;
+
+type
+  { Property editor to select an animation on TCastleSceneCore. }
+  TSceneAutoAnimationPropertyEditor = class(TStringPropertyEditor)
+  public
+    function GetAttributes: TPropertyAttributes; override;
+    procedure GetValues(Proc: TGetStrProc); override;
+    procedure SetValue(const NewValue: String); override;
+  end;
 {$endif}
 
 var
@@ -446,6 +455,31 @@ begin
     end;
     Modified;
   finally FreeAndNil(D) end;
+end;
+
+function TSceneAutoAnimationPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  Result := [paMultiSelect, paValueList, paSortList, paRevertable];
+end;
+
+procedure TSceneAutoAnimationPropertyEditor.GetValues(Proc: TGetStrProc);
+var
+  Scene: TCastleSpine;
+  S: String;
+begin
+  Proc('');
+  Scene := GetComponent(0) as TCastleSpine;
+  for S in Scene.AnimationsList do
+    Proc(S);
+end;
+
+procedure TSceneAutoAnimationPropertyEditor.SetValue(const NewValue: String);
+var
+  Scene: TCastleSpine;
+begin
+  inherited SetValue(NewValue);
+  Scene := GetComponent(0) as TCastleSpine;
+  Scene.AutoAnimation := NewValue;
 end;
 {$endif}
 
@@ -1206,6 +1240,8 @@ initialization
   {$ifdef CASTLE_DESIGN_MODE}
   RegisterPropertyEditor(TypeInfo(TStrings), TCastleSpine, 'ExposeTransforms',
     TExposeTransformsPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'AutoAnimation',
+    TSceneAutoAnimationPropertyEditor);
   {$endif}
   SpineDataCache := TCastleSpineDataCache.Create;
 
