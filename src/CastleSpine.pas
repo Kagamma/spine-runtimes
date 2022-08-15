@@ -521,6 +521,7 @@ begin
     RenderProgram.AttachFragmentShader(FragmentShaderSource);
     RenderProgram.Link;
   end;
+  Self.FShader := RenderProgram;
   if VBO = 0 then
   begin
     glGenBuffers(1, @VBO);
@@ -541,6 +542,8 @@ begin
       glDeleteBuffers(1, @VBO);
       VBO := 0;
     end;
+    if Self.FShader <> RenderProgram then
+      Self.FShader.Free;
     Self.FIsGLContextInitialized := False;
   end;
   inherited;
@@ -795,7 +798,6 @@ begin
     @Self.SetColorForPersistent,
     Self.FColor
   );
-  Self.FShader := RenderProgram;
 end;
 
 destructor TCastleSpine.Destroy;
@@ -806,8 +808,6 @@ begin
   Self.FExposeTransforms.Free;
   Self.FControlBoneList.Free;
   Self.FAnimationsList.Free;
-  if Self.FShader <> RenderProgram then
-    Self.FShader.Free;
   inherited;
 end;
 
@@ -1128,8 +1128,6 @@ begin
   end;
 
   PreviousProgram := RenderContext.CurrentProgram;
-  if Self.FShader = nil then
-    Self.FShader := RenderProgram;
   Self.FShader.Enable;
 
   Self.FShader.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
