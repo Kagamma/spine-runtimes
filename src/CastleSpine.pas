@@ -139,6 +139,7 @@ type
     FDefaultAnimationTransition: Single;
     FAnimationsList: TStrings;
     FProcessEvents: Boolean;
+    FShader: TGLSLProgram;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -172,6 +173,7 @@ type
     property Skeleton: PspSkeleton read FspSkeleton;
     property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
     property AnimationsList: TStrings read FAnimationsList write FAnimationsList;
+    property Shader: TGLSLProgram read FShader write FShader;
   published
     property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
     property DefaultAnimationTransition: Single read FDefaultAnimationTransition write FDefaultAnimationTransition default 0;
@@ -759,6 +761,7 @@ begin
     @Self.SetColorForPersistent,
     Self.FColor
   );
+  Self.FShader := RenderProgram;
 end;
 
 destructor TCastleSpine.Destroy;
@@ -769,6 +772,8 @@ begin
   Self.FExposeTransforms.Free;
   Self.FControlBoneList.Free;
   Self.FAnimationsList.Free;
+  if Self.FShader <> RenderProgram then
+    Self.FShader.Free;
   inherited;
 end;
 
@@ -1087,19 +1092,21 @@ begin
   end;
 
   PreviousProgram := RenderContext.CurrentProgram;
-  RenderProgram.Enable;
+  if Self.FShader = nil then
+    Self.FShader := RenderProgram;
+  Self.FShader.Enable;
 
-  RenderProgram.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
-  RenderProgram.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
-  RenderProgram.Uniform('color').SetValue(Self.FColor);
+  Self.FShader.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
+  Self.FShader.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
+  Self.FShader.Uniform('color').SetValue(Self.FColor);
   if Self.FEnableFog and (Params.GlobalFog <> nil) then
   begin
     Fog := (Params.GlobalFog as TFogNode).Functionality(TFogFunctionality) as TFogFunctionality;
-    RenderProgram.Uniform('fogEnable').SetValue(1);
-    RenderProgram.Uniform('fogEnd').SetValue(Fog.VisibilityRange);
-    RenderProgram.Uniform('fogColor').SetValue(Fog.Color);
+    Self.FShader.Uniform('fogEnable').SetValue(1);
+    Self.FShader.Uniform('fogEnd').SetValue(Fog.VisibilityRange);
+    Self.FShader.Uniform('fogColor').SetValue(Fog.Color);
   end else
-    RenderProgram.Uniform('fogEnable').SetValue(0);
+    Self.FShader.Uniform('fogEnable').SetValue(0);
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
