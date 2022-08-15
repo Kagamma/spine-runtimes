@@ -898,6 +898,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(8));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, SizeOf(TCastleSpineVertex), Pointer(16));
+    Writeln('1');
 
     for J := 0 to Skeleton^.slotsCount - 1 do
     begin
@@ -910,31 +911,41 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
         spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
         Continue;
       end;
+    Writeln('2');
 
       case Attachment^.type_ of
         SP_ATTACHMENT_REGION:
           begin
+    Writeln('33');
             RegionAttachment := PspRegionAttachment(Attachment);
+    Writeln('a');
             AttachmentColor := RegionAttachment^.color;
+    Writeln('b');
             if AttachmentColor.a = 0 then
             begin
               spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
               Continue;
             end;
+    Writeln('c');
             Image := TDrawableImage(PspAtlasRegion(RegionAttachment^.rendererObject)^.page^.rendererObject);
+    Writeln('d');
             spRegionAttachment_computeWorldVertices(RegionAttachment, Slot, @WorldVerticesPositions[0], 0, 2);
+    Writeln('e');
             if PreviousImage = nil then
             begin
               PreviousImage := Image;
             end;
+    Writeln('f');
             VertexCount := 4;
             IndexCount := 6;
             VertexPtr := @WorldVerticesPositions[0];
             IndexPtr := @RegionIndices[0];
             UVPtr := RegionAttachment^.uvs;
+    Writeln('3');
           end;
         SP_ATTACHMENT_MESH:
           begin
+    Writeln('44');
             MeshAttachment := PspMeshAttachment(Attachment);
             AttachmentColor := RegionAttachment^.color;
             if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
@@ -954,16 +965,20 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
             VertexPtr := @WorldVerticesPositions[0];
             IndexPtr := MeshAttachment^.triangles;
             UVPtr := MeshAttachment^.uvs;
+    Writeln('4');
           end;
         SP_ATTACHMENT_CLIPPING:
           begin
+    Writeln('55');
             ClipAttachment := PspClippingAttachment(Attachment);
             spSkeletonClipping_clipStart(Self.FspClipper, Slot, ClipAttachment);
+    Writeln('5');
             Continue;
           end;
         else
           Continue;
       end;
+    Writeln('6');
 
       // Flush the current pipeline if material change
       if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
@@ -992,6 +1007,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
         Render;
         PreviousBlendMode := Integer(Slot^.data^.blendMode);
         PreviousImage := Image;
+    Writeln('7');
       end;
 
       Color := Vector4(
@@ -1023,6 +1039,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
 
       spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
     end;
+    Writeln('8');
     Render;
     spSkeletonClipping_clipEnd2(Self.FspClipper);
 
@@ -1032,6 +1049,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
     begin
       Inc(Params.Statistics.ScenesRendered);
     end;
+    Writeln('9');
   end;
 
 var

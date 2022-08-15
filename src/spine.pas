@@ -109,11 +109,13 @@ type
   PspTransformConstraint = Pointer;
   PPspTransformConstraint = ^PspTransformConstraint;
   PspPathConstraint = Pointer;
+  PspTextureRegion = ^TspTextureRegion;
   PPspPathConstraint = ^PspPathConstraint;
   PspSlot = ^TspSlot;
   PPspSlot = ^PspSlot;
   PspVertexAttachment = ^TspVertexAttachment;
   PspMeshAttachment = ^TspMeshAttachment;
+  PspSequence = Pointer;
 
   TspColor = record
     r, g, b, a: cfloat;
@@ -147,6 +149,15 @@ type
     transformMode: TspTransformMode;
     skinRequired: cbool;
     color: TspColor;
+  end;
+
+  TspTextureRegion = record
+    rendererObject: Pointer;
+    u, v, u2, v2: cfloat;
+    degrees: cint;
+    offsetX, offsetY: cfloat;
+    width, height: cint;
+    originalWidth, originalHeight: cint;
   end;
 
   PspSkeletonClipping = ^TspSkeletonClipping;
@@ -242,9 +253,8 @@ type
     x, y, scaleX, scaleY, rotation, width, height: cfloat;
     color: TspColor;
     rendererObject: Pointer;
-    regionOffsetX, regionOffsetY: cint;
-    regionWidth, regionHeight: cint;
-    regionOriginalWidth, regionOriginalHeight: cint;
+	  region: PspTextureRegion;
+	  sequence: PspSequence;
     offset: array[0..7] of cfloat;
     uvs: array[0..7] of cfloat;
   end;
@@ -262,13 +272,10 @@ type
   end;
 
   TspAtlasRegion = record
+	  super: TspTextureRegion;
     name: PChar;
-    x, y, width, height: cint;
-    u, v, u2, v2: cfloat;
-    offsetX, offsetY: cint;
-    originalWidth, originalHeight: cint;
+    x, y: cint;
     index_: cint;
-    degrees: cint;
     splits: ^cint;
     pads: ^cint;
     keyValues: PspKeyValueArray;
@@ -343,11 +350,8 @@ type
   TspMeshAttachment = record
     super: TspVertexAttachment;
     rendererObject: Pointer;
-    regionOffsetX, regionOffsetY: cint;
-    regionWidth, regionHeight: cint;
-    regionOriginalWidth, regionOriginalHeight: cint;
-    regionU, regionV, regionU2, regionV2: cfloat;
-    regionDegrees: cint;
+    region: PspTextureRegion;
+    sequence: PspSequence;
     path: PChar;
     regionUVs: ^cfloat;
     uvs: ^cfloat;
