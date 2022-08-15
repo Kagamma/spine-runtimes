@@ -246,7 +246,7 @@ type
   end;
 
 type
-  { Property editor to select an animation on TCastleSceneCore. }
+  { Property editor to select an animation on TCastleSpine. }
   TSceneAutoAnimationPropertyEditor = class(TStringPropertyEditor)
   public
     function GetAttributes: TPropertyAttributes; override;
