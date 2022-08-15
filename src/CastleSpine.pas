@@ -101,7 +101,7 @@ type
     property ControlBone: Boolean read FControlBone write SetControlBone default False;
   end;
 
-  TCastleSpine = class(TCastleSceneCore)
+  TCastleSpine = class(TCastleTransform)
   strict private
     VBO: GLuint; // Maybe all instances could share the same VBO?
     FURL: String;
@@ -132,6 +132,13 @@ type
     FColorPersistent: TCastleColorPersistent;
     FOnEventNotify: TCastleSpineEventNotify; // Used by Spine's events
     FControlBoneList: TCastleSpineControlBoneList;
+    FTimePlaying: Boolean;
+    FTimePlayingSpeed: Single;
+    FAnimateSkipTicks: Integer;
+    FAnimateOnlyWhenVisible: Boolean;
+    FDefaultAnimationTransition: Single;
+    FAnimationsList: TStrings;
+    FProcessEvents: Boolean;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -164,7 +171,14 @@ type
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
     property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
+    property AnimationsList: TStrings read FAnimationsList write FAnimationsList;
   published
+    property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
+    property DefaultAnimationTransition: Single read FDefaultAnimationTransition write FDefaultAnimationTransition default 0;
+    property AnimateOnlyWhenVisible: Boolean read FAnimateOnlyWhenVisible write FAnimateOnlyWhenVisible;
+    property AnimateSkipTicks: Integer read FAnimateSkipTicks write FAnimateSkipTicks default 0;
+    property TimePlayingSpeed: Single read FTimePlayingSpeed write FTimePlayingSpeed default 1;
+    property TimePlaying: Boolean read FTimePlaying write FTimePlaying default True;
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
     property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
@@ -736,6 +750,9 @@ begin
   Self.FAutoAnimationLoop := True;
   Self.FExposeTransforms := TStringList.Create;
   Self.FControlBoneList := TCastleSpineControlBoneList.Create;
+  Self.FTimePlayingSpeed := 1;
+  Self.FTimePlaying := True;
+  Self.FAnimationsList := TstringList.Create;
   TStringList(Self.FExposeTransforms).OnChange := @Self.ExposeTransformsChange;
   Self.FColorPersistent := CreateColorPersistent(
     @Self.GetColorForPersistent,
@@ -751,6 +768,7 @@ begin
   Self.FColorPersistent.Free;
   Self.FExposeTransforms.Free;
   Self.FControlBoneList.Free;
+  Self.FAnimationsList.Free;
   inherited;
 end;
 
