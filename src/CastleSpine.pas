@@ -46,7 +46,7 @@ uses
 type
   TCastleSpineEvent = record
     State: PspAnimationState;
-    Typ: TSpEventType;
+    EventType: TSpEventType;
     Entry: PspTrackEntry;
     Event: PspEvent;
   end;
@@ -133,6 +133,7 @@ type
     FOnEventNotify: TCastleSpineEventNotify; // Used by Spine's events
     FControlBoneList: TCastleSpineControlBoneList;
     { Cleanup Spine resource associate with this instance }
+    FShader: TGLSLProgram;
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
     procedure ExposeTransformsChange(Sender: TObject);
@@ -164,6 +165,7 @@ type
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
     property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
+    property Shader: TGLSLProgram read FShader write FShader;
   published
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
@@ -233,7 +235,7 @@ type
 var
   WorldVerticesPositions: array[0..(16384 * 3 - 1)] of Single;
   SpineVertices: array[0..(High(WorldVerticesPositions) div 3) - 1] of TCastleSpineVertex;
-  RenderProgram: TGLSLProgram;
+  Shader: TGLSLProgram;
   RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
   CurrentSpineInstance: TCastleSpine;
 
@@ -301,7 +303,7 @@ begin
   if (CurrentSpineInstance <> nil) and (CurrentSpineInstance.OnEventNotify <> nil) then
   begin
     E.State := State;
-    E.Typ := Typ;
+    E.EventType := Typ;
     E.Entry := Entry;
     E.Event := Event;
     CurrentSpineInstance.OnEventNotify(E);
@@ -464,13 +466,14 @@ begin
     Spine_Loader_RegisterLoadTextureRoutine(@LoaderLoadTexture);
     Spine_Loader_RegisterFreeTextureRoutine(@LoaderFreeTexture);
   end;
-  if RenderProgram = nil then
+  if Shader = nil then
   begin
-    RenderProgram := TGLSLProgram.Create;
-    RenderProgram.AttachVertexShader(VertexShaderSource);
-    RenderProgram.AttachFragmentShader(FragmentShaderSource);
-    RenderProgram.Link;
+    Shader := TGLSLProgram.Create;
+    Shader.AttachVertexShader(VertexShaderSource);
+    Shader.AttachFragmentShader(FragmentShaderSource);
+    Shader.Link;
   end;
+  Self.FShader := Shader;
   if VBO = 0 then
   begin
     glGenBuffers(1, @VBO);
@@ -492,6 +495,8 @@ begin
       VBO := 0;
     end;
     Self.FIsGLContextInitialized := False;
+    if Self.FShader <> Shader then
+      Self.FShader.Free;
   end;
   inherited;
 end;
@@ -1087,19 +1092,19 @@ begin
   end;
 
   PreviousProgram := RenderContext.CurrentProgram;
-  RenderProgram.Enable;
+  Self.FShader.Enable;
 
-  RenderProgram.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
-  RenderProgram.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
-  RenderProgram.Uniform('color').SetValue(Self.FColor);
+  Self.FShader.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
+  Self.FShader.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
+  Self.FShader.Uniform('color').SetValue(Self.FColor);
   if Self.FEnableFog and (Params.GlobalFog <> nil) then
   begin
     Fog := (Params.GlobalFog as TFogNode).Functionality(TFogFunctionality) as TFogFunctionality;
-    RenderProgram.Uniform('fogEnable').SetValue(1);
-    RenderProgram.Uniform('fogEnd').SetValue(Fog.VisibilityRange);
-    RenderProgram.Uniform('fogColor').SetValue(Fog.Color);
+    Self.FShader.Uniform('fogEnable').SetValue(1);
+    Self.FShader.Uniform('fogEnd').SetValue(Fog.VisibilityRange);
+    Self.FShader.Uniform('fogColor').SetValue(Fog.Color);
   end else
-    RenderProgram.Uniform('fogEnable').SetValue(0);
+    Self.FShader.Uniform('fogEnable').SetValue(0);
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
