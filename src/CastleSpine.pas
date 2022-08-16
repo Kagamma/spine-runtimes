@@ -835,7 +835,14 @@ end;
 function TCastleSpine.PropertySections(
   const PropertyName: String): TPropertySections;
 begin
-  if (PropertyName = 'ExposeTransforms') then
+  if (PropertyName = 'ExposeTransforms')
+    or (PropertyName = 'AutoAnimation')
+    or (PropertyName = 'AutoAnimationLoop')
+    or (PropertyName = 'DefaultAnimationTransition')
+    or (PropertyName = 'ProcessEvents')
+    or (PropertyName = 'TimePlaying')
+    or (PropertyName = 'TimePlayingSpeed')
+    or (PropertyName = 'URL') then
     Result := [psBasic]
   else
     Result := inherited PropertySections(PropertyName);
@@ -1267,6 +1274,8 @@ initialization
     TExposeTransformsPropertyEditor);
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'AutoAnimation',
     TSceneAutoAnimationPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'URL',
+    TImageURLPropertyEditor);
   {$endif}
   SpineDataCache := TCastleSpineDataCache.Create;
 
