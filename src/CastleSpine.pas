@@ -1025,8 +1025,6 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
       glDrawArrays(GL_TRIANGLES, 0, TotalVertexCount);
 
       TotalVertexCount := 0;
-      PreviousImage := Image;
-      PreviousBlendMode := Integer(Slot^.data^.blendMode);
       if not Self.ExcludeFromStatistics then
       begin
         Inc(Params.Statistics.ShapesRendered);
@@ -1114,6 +1112,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
       // Flush the current pipeline if material change
       if (PreviousBlendMode <> Integer(Slot^.data^.blendMode)) or (PreviousImage <> Image) then
       begin
+        Render;
         // Blend mode
         if Integer(Slot^.data^.blendMode) <> PreviousBlendMode then
         begin
@@ -1135,7 +1134,6 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
             end;
           end;
         end;
-        Render;
         PreviousBlendMode := Integer(Slot^.data^.blendMode);
         PreviousImage := Image;
       end;
@@ -1170,6 +1168,8 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
       spSkeletonClipping_clipEnd(Self.FspClipper, Slot);
     end;
     Render;
+    PreviousImage := Image;
+    PreviousBlendMode := Integer(Slot^.data^.blendMode);
     spSkeletonClipping_clipEnd2(Self.FspClipper);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
