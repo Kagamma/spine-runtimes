@@ -1275,7 +1275,7 @@ initialization
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'AutoAnimation',
     TSceneAutoAnimationPropertyEditor);
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'URL',
-    TImageURLPropertyEditor);
+    TSceneURLPropertyEditor);
   {$endif}
   SpineDataCache := TCastleSpineDataCache.Create;
 
