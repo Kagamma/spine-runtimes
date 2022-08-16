@@ -1082,7 +1082,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
         SP_ATTACHMENT_MESH:
           begin
             MeshAttachment := PspMeshAttachment(Attachment);
-            AttachmentColor := RegionAttachment^.color;
+            AttachmentColor := MeshAttachment^.color;
             if (MeshAttachment^.super.worldVerticesLength > High(WorldVerticesPositions)) then continue;
             if AttachmentColor.a = 0 then
             begin
