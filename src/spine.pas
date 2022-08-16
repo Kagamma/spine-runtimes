@@ -438,6 +438,7 @@ var
   spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
   spSkeleton_setToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_setSkinByName: function(Skeleton: PspSkeleton; Name: PChar): cint; SPINECALL;
+  spSkeleton_setSlotsToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
 
   // Bone
   spBone_getWorldRotationX: function(Bone: PspBone): cfloat; SPINECALL;
@@ -535,6 +536,7 @@ begin;
   spSkeleton_findBone := GetProcedureAddress(Lib, 'spSkeleton_findBone');
   spSkeleton_setToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setToSetupPose');
   spSkeleton_setSkinByName := GetProcedureAddress(Lib, 'spSkeleton_setSkinByName');
+  spSkeleton_setSlotsToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setSlotsToSetupPose');
 
   // Bone
   spBone_getWorldRotationX := GetProcedureAddress(Lib, 'spBone_getWorldRotationX');

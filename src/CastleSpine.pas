@@ -851,7 +851,10 @@ procedure TCastleSpine.SetSkin(const S: String);
 begin
   Self.FSkin := S;
   if Self.FspSkeleton <> nil then
+  begin
     spSkeleton_setSkinByName(Self.FspSkeleton, PChar(S));
+    spSkeleton_setSlotsToSetupPose(Self.FspSkeleton);
+  end;
 end;
 
 constructor TCastleSpine.Create(AOwner: TComponent);
