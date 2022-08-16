@@ -149,8 +149,10 @@ type
     FAnimateOnlyWhenVisible: Boolean;
     FDefaultAnimationTransition: Single;
     FAnimationsList: TStrings;
+    FSkinsList: TStrings;
     FProcessEvents: Boolean;
     FShader: TGLSLProgram;
+    FSkin: String;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -164,6 +166,7 @@ type
     procedure SetExposeTransforms(const Value: TStrings);
     procedure SetExposeTransformsPrefix(const S: String);
     function GetColorForPersistent: TVector4;
+    procedure SetSkin(const S: String);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -183,7 +186,8 @@ type
     property Color: TVector4 read FColor write FColor;
     property Skeleton: PspSkeleton read FspSkeleton;
     property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
-    property AnimationsList: TStrings read FAnimationsList write FAnimationsList;
+    property AnimationsList: TStrings read FAnimationsList;
+    property SkinsList: TStrings read FSkinsList;
     property Shader: TGLSLProgram read FShader write FShader;
   published
     property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
@@ -192,6 +196,7 @@ type
     property AnimateSkipTicks: Integer read FAnimateSkipTicks write FAnimateSkipTicks default 0;
     property TimePlayingSpeed: Single read FTimePlayingSpeed write FTimePlayingSpeed default 1;
     property TimePlaying: Boolean read FTimePlaying write FTimePlaying default True;
+    property Skin: String read FSkin write SetSkin;
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
     property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
@@ -258,7 +263,14 @@ type
 
 type
   { Property editor to select an animation on TCastleSpine. }
-  TSceneAutoAnimationPropertyEditor = class(TStringPropertyEditor)
+  TSpineAutoAnimationPropertyEditor = class(TStringPropertyEditor)
+  public
+    function GetAttributes: TPropertyAttributes; override;
+    procedure GetValues(Proc: TGetStrProc); override;
+    procedure SetValue(const NewValue: String); override;
+  end;
+
+  TSpineSkinPropertyEditor = class(TStringPropertyEditor)
   public
     function GetAttributes: TPropertyAttributes; override;
     procedure GetValues(Proc: TGetStrProc); override;
@@ -477,12 +489,12 @@ begin
   finally FreeAndNil(D) end;
 end;
 
-function TSceneAutoAnimationPropertyEditor.GetAttributes: TPropertyAttributes;
+function TSpineAutoAnimationPropertyEditor.GetAttributes: TPropertyAttributes;
 begin
   Result := [paMultiSelect, paValueList, paSortList, paRevertable];
 end;
 
-procedure TSceneAutoAnimationPropertyEditor.GetValues(Proc: TGetStrProc);
+procedure TSpineAutoAnimationPropertyEditor.GetValues(Proc: TGetStrProc);
 var
   Scene: TCastleSpine;
   S: String;
@@ -493,13 +505,38 @@ begin
     Proc(S);
 end;
 
-procedure TSceneAutoAnimationPropertyEditor.SetValue(const NewValue: String);
+procedure TSpineAutoAnimationPropertyEditor.SetValue(const NewValue: String);
 var
   Scene: TCastleSpine;
 begin
   inherited SetValue(NewValue);
   Scene := GetComponent(0) as TCastleSpine;
   Scene.AutoAnimation := NewValue;
+end;
+
+function TSpineSkinPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  Result := [paMultiSelect, paValueList, paSortList, paRevertable];
+end;
+
+procedure TSpineSkinPropertyEditor.GetValues(Proc: TGetStrProc);
+var
+  Scene: TCastleSpine;
+  S: String;
+begin
+  Proc('');
+  Scene := GetComponent(0) as TCastleSpine;
+  for S in Scene.SkinsList do
+    Proc(S);
+end;
+
+procedure TSpineSkinPropertyEditor.SetValue(const NewValue: String);
+var
+  Scene: TCastleSpine;
+begin
+  inherited SetValue(NewValue);
+  Scene := GetComponent(0) as TCastleSpine;
+  Scene.Skin := NewValue;
 end;
 {$endif}
 
@@ -648,6 +685,16 @@ begin
     // Auto play animation
     if SpineData^.SkeletonData^.animations[I]^.name = Self.FAutoAnimation then
       Self.AutoAnimation := Self.AutoAnimation;
+  end;
+
+  // Load skin
+  Self.SkinsList.Clear;
+  for I := 0 to SpineData^.SkeletonData^.skinsCount - 1 do
+  begin
+    Self.SkinsList.Add(SpineData^.SkeletonData^.skins[I]^.name);
+    // Auto apply skin
+    if (SpineData^.SkeletonData^.skins[I]^.name = Self.FSkin) and (Self.FSkin <> '') then
+      spSkeleton_setSkinByName(Self.FspSkeleton, PChar(Self.FSkin));
   end;
 
   // Expose bone list
@@ -800,6 +847,13 @@ begin
   Result := Self.FColor;
 end;
 
+procedure TCastleSpine.SetSkin(const S: String);
+begin
+  Self.FSkin := S;
+  if Self.FspSkeleton <> nil then
+    spSkeleton_setSkinByName(Self.FspSkeleton, PChar(S));
+end;
+
 constructor TCastleSpine.Create(AOwner: TComponent);
 begin
   inherited;
@@ -812,6 +866,7 @@ begin
   Self.FTimePlayingSpeed := 1;
   Self.FTimePlaying := True;
   Self.FAnimationsList := TstringList.Create;
+  Self.FSkinsList := TStringList.Create;
   TStringList(Self.FExposeTransforms).OnChange := @Self.ExposeTransformsChange;
   Self.FColorPersistent := CreateColorPersistent(
     @Self.GetColorForPersistent,
@@ -828,6 +883,7 @@ begin
   Self.FExposeTransforms.Free;
   Self.FControlBoneList.Free;
   Self.FAnimationsList.Free;
+  Self.FSkinsList.Free;
   inherited;
 end;
 
@@ -842,6 +898,7 @@ begin
     or (PropertyName = 'ProcessEvents')
     or (PropertyName = 'TimePlaying')
     or (PropertyName = 'TimePlayingSpeed')
+    or (PropertyName = 'Skin')
     or (PropertyName = 'URL') then
     Result := [psBasic]
   else
@@ -1273,9 +1330,11 @@ initialization
   RegisterPropertyEditor(TypeInfo(TStrings), TCastleSpine, 'ExposeTransforms',
     TExposeTransformsPropertyEditor);
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'AutoAnimation',
-    TSceneAutoAnimationPropertyEditor);
+    TSpineAutoAnimationPropertyEditor);
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'URL',
     TSceneURLPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'Skin',
+    TSpineSkinPropertyEditor);
   {$endif}
   SpineDataCache := TCastleSpineDataCache.Create;
 

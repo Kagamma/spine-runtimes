@@ -79,7 +79,7 @@ type
   PspAttachmentLoader = Pointer;
   PspSkeletonJson = ^TspSkeletonJson;
   PspBoneData = ^TspBoneData;
-  PspSkin = Pointer;
+  PspSkin = ^TspSkin;
   PspTimelineArray = Pointer;
   PspPropertyIdArray = Pointer;
   PspBoundingBoxAttachment = Pointer;
@@ -116,6 +116,10 @@ type
   PspVertexAttachment = ^TspVertexAttachment;
   PspMeshAttachment = ^TspMeshAttachment;
   PspSequence = Pointer;
+  PspBoneDataArray = Pointer;
+  PspIkConstraintDataArray = Pointer;
+  PspTransformConstraintDataArray = Pointer;
+  PspPathConstraintDataArray = Pointer;
 
   TspColor = record
     r, g, b, a: cfloat;
@@ -138,6 +142,14 @@ type
     scale: cfloat;
     attachmentLoader: PspAttachmentLoader;
     error: PChar;
+  end;
+
+  TspSkin = record
+    name: PChar;
+    bones: PspBoneDataArray;
+    ikConstraints: PspIkConstraintDataArray;
+    transformConstraints: PspTransformConstraintDataArray;
+    pathConstraints: PspPathConstraintDataArray;
   end;
 
   TspBoneData = record
@@ -425,6 +437,7 @@ var
   spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
   spSkeleton_setToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
+  spSkeleton_setSkinByName: function(Skeleton: PspSkeleton; Name: PChar): cint; SPINECALL;
 
   // Bone
   spBone_getWorldRotationX: function(Bone: PspBone): cfloat; SPINECALL;
@@ -521,6 +534,7 @@ begin;
   spSkeleton_updateWorldTransform := GetProcedureAddress(Lib, 'spSkeleton_updateWorldTransform');
   spSkeleton_findBone := GetProcedureAddress(Lib, 'spSkeleton_findBone');
   spSkeleton_setToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setToSetupPose');
+  spSkeleton_setSkinByName := GetProcedureAddress(Lib, 'spSkeleton_setSkinByName');
 
   // Bone
   spBone_getWorldRotationX := GetProcedureAddress(Lib, 'spBone_getWorldRotationX');
