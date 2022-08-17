@@ -434,11 +434,19 @@ var
   spSkeleton_create: function(SkeletonData: PspSkeletonData): PspSkeleton; SPINECALL;
   spSkeleton_dispose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeletonData_dispose: procedure(SkeletonData: PspSkeletonData); SPINECALL;
+  spSkeletonData_findSkin: function(SkeletonJson: PspSkeletonJson; Name: PChar): PspSkin; SPINECALL;
   spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
   spSkeleton_setToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
+  spSkeleton_setSkin: procedure(Skeleton: PspSkeleton; Skin: PspSkin); SPINECALL;
   spSkeleton_setSkinByName: function(Skeleton: PspSkeleton; Name: PChar): cint; SPINECALL;
   spSkeleton_setSlotsToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
+
+  // Skin
+  spSkin_create: function(Name: PChar): PspSkin; SPINECALL;
+  spSkin_dispose: procedure(Skin: PspSkin); SPINECALL;
+  spSkin_addSkin: procedure(Skin, Other: PspSkin); SPINECALL;
+  spSkin_clear: procedure(Skin: PspSkin); SPINECALL;
 
   // Bone
   spBone_getWorldRotationX: function(Bone: PspBone): cfloat; SPINECALL;
@@ -532,11 +540,19 @@ begin;
   spSkeleton_create := GetProcedureAddress(Lib, 'spSkeleton_create');
   spSkeleton_dispose := GetProcedureAddress(Lib, 'spSkeleton_dispose');
   spSkeletonData_dispose := GetProcedureAddress(Lib, 'spSkeletonData_dispose');
+  spSkeletonData_findSkin := GetProcedureAddress(Lib, 'spSkeletonData_findSkin');
   spSkeleton_updateWorldTransform := GetProcedureAddress(Lib, 'spSkeleton_updateWorldTransform');
   spSkeleton_findBone := GetProcedureAddress(Lib, 'spSkeleton_findBone');
   spSkeleton_setToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setToSetupPose');
+  spSkeleton_setSkin := GetProcedureAddress(Lib, 'spSkeleton_setSkin');
   spSkeleton_setSkinByName := GetProcedureAddress(Lib, 'spSkeleton_setSkinByName');
   spSkeleton_setSlotsToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setSlotsToSetupPose');
+
+  // Skin
+  spSkin_create := GetProcedureAddress(Lib, 'spSkin_create');
+  spSkin_dispose := GetProcedureAddress(Lib, 'spSkin_dispose');
+  spSkin_addSkin := GetProcedureAddress(Lib, 'spSkin_addSkin');
+  spSkin_clear := GetProcedureAddress(Lib, 'spSkin_clear');
 
   // Bone
   spBone_getWorldRotationX := GetProcedureAddress(Lib, 'spBone_getWorldRotationX');
