@@ -1479,7 +1479,6 @@ begin
       TrackEntry := spAnimationState_setAnimationByName(Self.FspAnimationState, Parameters.Track, PChar(Parameters.Name), Parameters.Loop);
       TrackEntry^.reverse := Integer(not Parameters.Forward);
       TrackEntry^.trackTime := Parameters.Track;
-      spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
     end;
   end;
   Self.FParametersList.Clear;
