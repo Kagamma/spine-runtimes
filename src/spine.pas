@@ -442,10 +442,11 @@ var
   spSkeletonData_findSkin: function(SkeletonJson: PspSkeletonJson; Name: PChar): PspSkin; SPINECALL;
   spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
-  spSkeleton_setToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_setSkin: procedure(Skeleton: PspSkeleton; Skin: PspSkin); SPINECALL;
   spSkeleton_setSkinByName: function(Skeleton: PspSkeleton; Name: PChar): cint; SPINECALL;
+  spSkeleton_setToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeleton_setSlotsToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
+  spSkeleton_setBonesToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
 
   // Polygon
   spPolygon_containsPoint: function(Polygon: PspPolygon; X, Y: cfloat): cbool; SPINECALL;
@@ -556,10 +557,11 @@ begin;
   spSkeletonData_findSkin := GetProcedureAddress(Lib, 'spSkeletonData_findSkin');
   spSkeleton_updateWorldTransform := GetProcedureAddress(Lib, 'spSkeleton_updateWorldTransform');
   spSkeleton_findBone := GetProcedureAddress(Lib, 'spSkeleton_findBone');
-  spSkeleton_setToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setToSetupPose');
   spSkeleton_setSkin := GetProcedureAddress(Lib, 'spSkeleton_setSkin');
   spSkeleton_setSkinByName := GetProcedureAddress(Lib, 'spSkeleton_setSkinByName');
+  spSkeleton_setToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setToSetupPose');
   spSkeleton_setSlotsToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setSlotsToSetupPose');
+  spSkeleton_setBonesToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setBonesToSetupPose');
 
   // Polygon
   spPolygon_containsPoint := GetProcedureAddress(Lib, 'spPolygon_containsPoint');

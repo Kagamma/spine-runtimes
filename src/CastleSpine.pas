@@ -44,16 +44,15 @@ uses
   CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors;
 
 type
-  TCastleSpinePlayAnimationParameters = class
+  TCastleSpinePlayAnimationParameters = record
     Name: String;
     Loop: Boolean;
     Forward: Boolean;
     TransitionDuration: Single;
     InitialTime: Single;
     Track: Integer;
-
-    constructor Create;
   end;
+  TCastleSpinePlayAnimationParametersList = specialize TList<TCastleSpinePlayAnimationParameters>;
 
   TCastleSpineEvent = record
     State: PspAnimationState;
@@ -117,8 +116,7 @@ type
     VBO: GLuint; // Maybe all instances could share the same VBO?
     FURL: String;
     FIsNeedRefreshAnimation: Boolean;
-    FParameters: TCastleSpinePlayAnimationParameters;
-    FTrack: Integer;
+    FParametersList: TCastleSpinePlayAnimationParametersList;
     FIsGLContextInitialized: Boolean;
     FspSkin: PspSkin;
     FspSkinArray: array of PspSkin;
@@ -358,15 +356,6 @@ begin
   end;
 end;
 
-{ ----- TCastleSpinePlayAnimationParameters ----- }
-
-constructor TCastleSpinePlayAnimationParameters.Create;
-begin
-  inherited;
-  Self.Loop := False;
-  Self.Forward := True;
-end;
-
 { ----- TCastleSpineTransformBehavior ----- }
 
 {$ifdef CASTLE_DESIGN_MODE}
@@ -513,7 +502,7 @@ begin
     DialogSelection.Clear;
 
     // add to D.Selection all possible animations from the scene
-    for I := 0 to Scene.SkinsList.Count - 1 do
+    for I := 0 to Scene.AnimationsList.Count - 1 do
     begin
       if DialogSelection.FindName(Scene.AnimationsList[I]) = nil then
       begin
@@ -778,7 +767,7 @@ begin
     // Auto apply skin
     for J := 0 to Self.FSkins.Count - 1 do
     begin
-      if (SpineData^.SkeletonData^.skins[I]^.name = Self.FSkins[I]) then
+      if (SpineData^.SkeletonData^.skins[I]^.name = Self.FSkins[J]) then
       begin
         spSkin_addSkin(Self.FspSkin, SpineData^.SkeletonData^.skins[I]);
         HasCustomSkin := True;
@@ -896,10 +885,17 @@ begin
   Self.FAutoAnimations.Assign(Value);
   if Value.Count > 0 then
   begin
+    if Value.Count > 1 then
+    begin
+      Self.StopAnimation;
+    end;
     for I := 0 to Self.FAutoAnimations.Count - 1 do
       Self.PlayAnimation(Self.FAutoAnimations[I], Self.FAutoAnimationsLoop, True, I);
   end else
+  begin
     Self.StopAnimation;
+    spSkeleton_setToSetupPose(Self.FspSkeleton);
+  end;
 end;
 
 procedure TCastleSpine.SetAutoAnimationsLoop(const V: Boolean);
@@ -984,7 +980,9 @@ begin
   inherited;
   Self.FColor := Vector4(1, 1, 1, 1);
   Self.FSmoothTexture := True;
-  Self.FParameters := TCastleSpinePlayAnimationParameters.Create;
+  Self.ProcessEvents := True;
+  Self.FParametersList := TCastleSpinePlayAnimationParametersList.Create;
+  Self.FAutoAnimations := TStringList.Create;
   Self.FAutoAnimationsLoop := True;
   Self.FExposeTransforms := TStringList.Create;
   TStringList(Self.FExposeTransforms).Sorted := True;
@@ -1006,12 +1004,13 @@ end;
 destructor TCastleSpine.Destroy;
 begin
   Self.Cleanup;
-  Self.FParameters.Free;
+  Self.FParametersList.Free;
   Self.FColorPersistent.Free;
   Self.FExposeTransforms.Free;
   Self.FSkins.Free;
   Self.FControlBoneList.Free;
   Self.FAnimationsList.Free;
+  Self.FAutoAnimations.Free;
   Self.FSkinsList.Free;
   inherited;
 end;
@@ -1384,27 +1383,23 @@ end;
 
 function TCastleSpine.PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean;
 begin
-  Self.FParameters.Name := Parameters.Name;
-  Self.FParameters.Loop := Parameters.Loop;
-  Self.FParameters.Forward := Parameters.Forward;
-  Self.FParameters.TransitionDuration := Parameters.TransitionDuration;
-  Self.FParameters.InitialTime := Parameters.InitialTime;
-  Self.FParameters.Track := Parameters.Track;
-  Self.FTrack := 0;
+  Self.FParametersList.Add(Parameters);
   Self.FIsAnimationPlaying := True;
   Self.FIsNeedRefreshAnimation := True;
   Result := True;
 end;
 
 function TCastleSpine.PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean; const Track: Integer = 0): boolean;
+var
+  Parameters: TCastleSpinePlayAnimationParameters;
 begin
-  Self.FParameters.Name := AnimationName;
-  Self.FParameters.Loop := Loop;
-  Self.FParameters.Forward := Forward;
-  Self.FParameters.TransitionDuration := Self.DefaultAnimationTransition;
-  Self.FParameters.InitialTime := 0;
-  Self.FParameters.Track := Track;
-  Self.FTrack := Track;
+  Parameters.Name := AnimationName;
+  Parameters.Loop := Loop;
+  Parameters.Forward := Forward;
+  Parameters.TransitionDuration := Self.DefaultAnimationTransition;
+  Parameters.InitialTime := 0;
+  Parameters.Track := Track;
+  Self.FParametersList.Add(Parameters);
   Self.FIsAnimationPlaying := True;
   Self.FIsNeedRefreshAnimation := True;
   Result := True;
@@ -1414,8 +1409,10 @@ procedure TCastleSpine.StopAnimation(const Track: Integer = -1);
 begin
   Self.FIsAnimationPlaying := False;
   if Track < 0 then
-    spAnimationState_clearTracks(Self.FspAnimationState)
-  else
+  begin
+    spAnimationState_clearTracks(Self.FspAnimationState);
+    spSkeleton_setToSetupPose(Self.FspSkeleton);
+  end else
     spAnimationState_clearTrack(Self.FspAnimationState, Track);
 end;
 
@@ -1451,33 +1448,41 @@ end;
 
 procedure TCastleSpine.InternalPlayAnimation;
 
-  function IsAnimationExists: Boolean;
+  function IsAnimationExists(const Parameters: TCastleSpinePlayAnimationParameters): Boolean;
   var
     I: Integer;
   begin
     for I := 0 to Self.FSpineData^.SkeletonData^.animationsCount - 1 do
-      if Self.FSpineData^.SkeletonData^.animations[I]^.Name = Self.FParameters.Name then
+      if Self.FSpineData^.SkeletonData^.animations[I]^.Name = Parameters.Name then
         Exit(True);
     Exit(False);
   end;
 
 var
   TrackEntry: PspTrackEntry;
+  Parameters: TCastleSpinePlayAnimationParameters;
 
 begin
   if Self.FspAnimationState = nil then Exit;
   CurrentSpineInstance := Self;
-  if IsAnimationExists then
+  for Parameters in Self.FParametersList do
   begin
-    if (Self.FPreviousAnimation <> '') and (Self.FPreviousAnimation <> Self.FParameters.Name) then
+    if IsAnimationExists(Parameters) then
     begin
-      spAnimationStateData_setMixByName(Self.FSpineData^.AnimationStateData, PChar(Self.FPreviousAnimation), PChar(Self.FParameters.Name), Self.FParameters.TransitionDuration);
+      if (Self.FParametersList.Count = 1) then
+      begin
+        if (Self.FPreviousAnimation <> '') and (Self.FPreviousAnimation <> Parameters.Name) then
+          spAnimationStateData_setMixByName(Self.FSpineData^.AnimationStateData, PChar(Self.FPreviousAnimation), PChar(Parameters.Name), Parameters.TransitionDuration);
+        Self.FPreviousAnimation := Parameters.Name;
+      end else
+        Self.FPreviousAnimation := '';
+      TrackEntry := spAnimationState_setAnimationByName(Self.FspAnimationState, Parameters.Track, PChar(Parameters.Name), Parameters.Loop);
+      TrackEntry^.reverse := Integer(not Parameters.Forward);
+      TrackEntry^.trackTime := Parameters.Track;
+      spAnimationState_apply(Self.FspAnimationState, Self.FspSkeleton);
     end;
-    TrackEntry := spAnimationState_setAnimationByName(Self.FspAnimationState, Self.FTrack, PChar(Self.FParameters.Name), Self.FParameters.Loop);
-    TrackEntry^.reverse := Integer(not Self.FParameters.Forward);
-    TrackEntry^.trackTime := Self.FParameters.Track;
-    Self.FPreviousAnimation := Self.FParameters.Name;
   end;
+  Self.FParametersList.Clear;
   Self.FIsNeedRefreshAnimation := False;
   CurrentSpineInstance := nil;
 end;
