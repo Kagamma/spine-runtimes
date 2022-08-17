@@ -9,6 +9,12 @@ Based on the official `spine-c` runtime. This provides an alternative way to loa
 ## Version Requirements
 Currently it provides support for Spine version 4.1. Make sure to download the correct version of dynamic library in `Release` and clone source code from the 4.1 branch.
 
+## Additional features compare to CGE's own runtime
+- Skeletal animations (can mix multiple animations on the same meshes)
+- Constraints (IK, Transform, Path)
+- Clipping attachments
+- Events
+
 ## How To Use
 (by Michalis from CGE discord) To use this in your own projects, 
 - Place the Pascal units in src of this repository (like CastleSpine) such that the compiler can find them. For example just clone this GitHub repo, and then edit CastleEngineManifest.xml  to add <search_paths> to point to the src here. See https://castle-engine.io/project_manifest#_compiler_options_and_paths  .
