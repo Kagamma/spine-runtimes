@@ -132,8 +132,8 @@ type
     FIsNeedRefresh: Boolean;
     FPreviousAnimation: String;
     FIsAnimationPlaying: Boolean;
-    FAutoAnimation: String;
-    FAutoAnimationLoop: Boolean;
+    FAutoAnimations: TStrings;
+    FAutoAnimationsLoop: Boolean;
     FSpineData: PCastleSpineData;
     FDistanceCulling: Single;
     FSecondsPassedAcc: Single; // Used by AnimationSkipTicks
@@ -162,8 +162,8 @@ type
     procedure GLContextOpen;
     procedure InternalLoadSpine;
     procedure InternalPlayAnimation;
-    procedure SetAutoAnimation(const S: String);
-    procedure SetAutoAnimationLoop(const V: Boolean);
+    procedure SetAutoAnimations(const Value: TStrings);
+    procedure SetAutoAnimationsLoop(const V: Boolean);
     procedure SetColorForPersistent(const AValue: TVector4);
     procedure SetExposeTransforms(const Value: TStrings);
     procedure SetExposeTransformsPrefix(const S: String);
@@ -205,8 +205,8 @@ type
     property TimePlaying: Boolean read FTimePlaying write FTimePlaying default True;
     property Skins: TStrings read FSkins write SetSkins;
     property URL: String read FURL write LoadSpine;
-    property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
-    property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
+    property AutoAnimations: TStrings read FAutoAnimations write SetAutoAnimations;
+    property AutoAnimationsLoop: Boolean read FAutoAnimationsLoop write SetAutoAnimationsLoop default true;
     property EnableFog: Boolean read FEnableFog write FEnableFog default False;
     property ColorPersistent: TCastleColorPersistent read FColorPersistent;
     property SmoothTexture: Boolean read FSmoothTexture write FSmoothTexture default True;
@@ -269,11 +269,9 @@ type
   end;
 
   { Property editor to select an animation on TCastleSpine. }
-  TSpineAutoAnimationPropertyEditor = class(TStringPropertyEditor)
+  TSpineAutoAnimationPropertyEditor = class(TStringsPropertyEditor)
   public
-    function GetAttributes: TPropertyAttributes; override;
-    procedure GetValues(Proc: TGetStrProc); override;
-    procedure SetValue(const NewValue: String); override;
+    procedure Edit; override;
   end;
 
   TSpineSkinPropertyEditor = class(TStringsPropertyEditor)
@@ -447,6 +445,7 @@ begin
     Scene := GetComponent(0) as TCastleSpine;
     Skeleton := Scene.Skeleton;
     D.Caption := 'Edit ' + Scene.Name + '.ExposeTransforms';
+    D.Label1.Caption := '';
 
     DialogSelection := D.Selection;
     DialogSelection.Clear;
@@ -493,29 +492,65 @@ begin
   finally FreeAndNil(D) end;
 end;
 
-function TSpineAutoAnimationPropertyEditor.GetAttributes: TPropertyAttributes;
-begin
-  Result := [paMultiSelect, paValueList, paSortList, paRevertable];
-end;
-
-procedure TSpineAutoAnimationPropertyEditor.GetValues(Proc: TGetStrProc);
+procedure TSpineAutoAnimationPropertyEditor.Edit;
 var
-  Scene: TCastleSpine;
+  DialogSelection: TExposeTransformSelection;
+  D: TExposeTransformsDialog;
+  ValueStrings, SelectionList: TStrings;
   S: String;
-begin
-  Proc('');
-  Scene := GetComponent(0) as TCastleSpine;
-  for S in Scene.AnimationsList do
-    Proc(S);
-end;
-
-procedure TSpineAutoAnimationPropertyEditor.SetValue(const NewValue: String);
-var
+  SelItem: TExposeTransformSelectionItem;
   Scene: TCastleSpine;
+  Item: TExposeTransformSelectionItem;
+  I: Integer;
 begin
-  inherited SetValue(NewValue);
-  Scene := GetComponent(0) as TCastleSpine;
-  Scene.AutoAnimation := NewValue;
+  D := TExposeTransformsDialog.Create(Application);
+  try
+    Scene := GetComponent(0) as TCastleSpine;
+    D.Caption := 'Edit ' + Scene.Name + '.AutoAnimations';
+    D.Label1.Caption := '';
+
+    DialogSelection := D.Selection;
+    DialogSelection.Clear;
+
+    // add to D.Selection all possible animations from the scene
+    for I := 0 to Scene.SkinsList.Count - 1 do
+    begin
+      if DialogSelection.FindName(Scene.AnimationsList[I]) = nil then
+      begin
+        Item := TExposeTransformSelectionItem.Create;
+        Item.Name := Scene.AnimationsList[I];
+        Item.ExistsInScene := true;
+        Item.Selected := false; // may be changed to true later
+        DialogSelection.Add(Item);
+      end;
+    end;
+
+    // add/update in D.Selection all currently selected animations
+    ValueStrings := TStrings(GetObjectValue);
+    for S in ValueStrings do
+      if S <> '' then
+      begin
+        SelItem := D.Selection.FindName(S);
+        if SelItem = nil then
+        begin
+          SelItem := TExposeTransformSelectionItem.Create;
+          SelItem.Name := S;
+          SelItem.ExistsInScene := false;
+          DialogSelection.Add(SelItem);
+        end;
+        SelItem.Selected := true
+      end;
+
+    D.UpdateSelectionUi;
+    if D.ShowModal = mrOK then
+    begin
+      SelectionList := DialogSelection.ToList;
+      try
+        SetPtrValue(SelectionList);
+      finally FreeAndNil(SelectionList) end;
+    end;
+    Modified;
+  finally FreeAndNil(D) end;
 end;
 
 procedure TSpineSkinPropertyEditor.Edit;
@@ -537,7 +572,7 @@ begin
     DialogSelection := D.Selection;
     DialogSelection.Clear;
 
-    // add to D.Selection all possible transforms from the scene
+    // add to D.Selection all possible skins from the scene
     for I := 0 to Scene.SkinsList.Count - 1 do
     begin
       if DialogSelection.FindName(Scene.SkinsList[I]) = nil then
@@ -550,7 +585,7 @@ begin
       end;
     end;
 
-    // add/update in D.Selection all currently selected transforms
+    // add/update in D.Selection all currently selected skins
     ValueStrings := TStrings(GetObjectValue);
     for S in ValueStrings do
       if S <> '' then
@@ -725,9 +760,11 @@ begin
   for I := 0 to SpineData^.SkeletonData^.animationsCount - 1 do
   begin
     Self.AnimationsList.Add(SpineData^.SkeletonData^.animations[I]^.name);
-    // Auto play animation
-    if SpineData^.SkeletonData^.animations[I]^.name = Self.FAutoAnimation then
-      Self.AutoAnimation := Self.AutoAnimation;
+  end;
+  // Auto play animation
+  for I := 0 to Self.FAutoAnimations.Count - 1 do
+  begin
+    Self.PlayAnimation(Self.FAutoAnimations[I], Self.FAutoAnimationsLoop, True, I);
   end;
 
   // Load skin
@@ -851,20 +888,29 @@ begin
   Self.FIsNeedRefreshBones := False;
 end;
 
-procedure TCastleSpine.SetAutoAnimation(const S: String);
+procedure TCastleSpine.SetAutoAnimations(const Value: TStrings);
+var
+  I: Integer;
 begin
-  Self.FAutoAnimation := S;
-  if Self.FAutoAnimation <> '' then
-    Self.PlayAnimation(Self.FAutoAnimation, Self.FAutoAnimationLoop)
-  else
+  Self.FAutoAnimations.Assign(Value);
+  if Value.Count > 0 then
+  begin
+    for I := 0 to Self.FAutoAnimations.Count - 1 do
+      Self.PlayAnimation(Self.FAutoAnimations[I], Self.FAutoAnimationsLoop, True, I);
+  end else
     Self.StopAnimation;
 end;
 
-procedure TCastleSpine.SetAutoAnimationLoop(const V: Boolean);
+procedure TCastleSpine.SetAutoAnimationsLoop(const V: Boolean);
+var
+  I: Integer;
 begin
-  Self.FAutoAnimationLoop := V;
-  if Self.FAutoAnimation <> '' then
-    Self.PlayAnimation(Self.FAutoAnimation, Self.FAutoAnimationLoop);
+  Self.FAutoAnimationsLoop := V;
+  if Self.FAutoAnimations.Count > 0 then
+  begin
+    for I := 0 to Self.FAutoAnimations.Count - 1 do
+      Self.PlayAnimation(Self.FAutoAnimations[I], Self.FAutoAnimationsLoop, True, I);
+  end;
 end;
 
 procedure TCastleSpine.SetColorForPersistent(const AValue: TVector4);
@@ -938,7 +984,7 @@ begin
   Self.FColor := Vector4(1, 1, 1, 1);
   Self.FSmoothTexture := True;
   Self.FParameters := TCastleSpinePlayAnimationParameters.Create;
-  Self.FAutoAnimationLoop := True;
+  Self.FAutoAnimationsLoop := True;
   Self.FExposeTransforms := TStringList.Create;
   TStringList(Self.FExposeTransforms).Sorted := True;
   Self.FSkins := TStringList.Create;
@@ -974,8 +1020,8 @@ function TCastleSpine.PropertySections(
   const PropertyName: String): TPropertySections;
 begin
   if (PropertyName = 'ExposeTransforms')
-    or (PropertyName = 'AutoAnimation')
-    or (PropertyName = 'AutoAnimationLoop')
+    or (PropertyName = 'AutoAnimations')
+    or (PropertyName = 'AutoAnimationsLoop')
     or (PropertyName = 'DefaultAnimationTransition')
     or (PropertyName = 'ProcessEvents')
     or (PropertyName = 'TimePlaying')
@@ -1441,7 +1487,7 @@ initialization
   {$ifdef CASTLE_DESIGN_MODE}
   RegisterPropertyEditor(TypeInfo(TStrings), TCastleSpine, 'ExposeTransforms',
     TExposeTransformsPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'AutoAnimation',
+  RegisterPropertyEditor(TypeInfo(TStrings), TCastleSpine, 'AutoAnimations',
     TSpineAutoAnimationPropertyEditor);
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'URL',
     TSceneURLPropertyEditor);
