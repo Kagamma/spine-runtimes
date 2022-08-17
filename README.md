@@ -4,7 +4,7 @@
 
 https://youtu.be/qeqasIfWLvo
 
-https://youtu.be/864hcLzMmz4
+https://youtu.be/kN0bVr4CJjg
 
 Based on the official `spine-c` runtime. This provides an alternative way to load and play Spine models in Castle Game Engine (CGE) beside the engine's own runtime implementation (which lack many Spine features compare to Spine's official runtime).
 
