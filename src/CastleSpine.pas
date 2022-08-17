@@ -120,6 +120,8 @@ type
     FParameters: TCastleSpinePlayAnimationParameters;
     FTrack: Integer;
     FIsGLContextInitialized: Boolean;
+    FspSkin: PspSkin;
+    FspSkinArray: array of PspSkin;
     FspSkeleton: PspSkeleton;
     FspSkeletonDefault: array of TspBone;
     FspAnimationState: PspAnimationState;
@@ -152,7 +154,7 @@ type
     FSkinsList: TStrings;
     FProcessEvents: Boolean;
     FShader: TGLSLProgram;
-    FSkin: String;
+    FSkins: TStrings;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -166,7 +168,7 @@ type
     procedure SetExposeTransforms(const Value: TStrings);
     procedure SetExposeTransformsPrefix(const S: String);
     function GetColorForPersistent: TVector4;
-    procedure SetSkin(const S: String);
+    procedure SetSkins(const Value: TStrings);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -196,7 +198,7 @@ type
     property AnimateSkipTicks: Integer read FAnimateSkipTicks write FAnimateSkipTicks default 0;
     property TimePlayingSpeed: Single read FTimePlayingSpeed write FTimePlayingSpeed default 1;
     property TimePlaying: Boolean read FTimePlaying write FTimePlaying default True;
-    property Skin: String read FSkin write SetSkin;
+    property Skins: TStrings read FSkins write SetSkins;
     property URL: String read FURL write LoadSpine;
     property AutoAnimation: String read FAutoAnimation write SetAutoAnimation;
     property AutoAnimationLoop: Boolean read FAutoAnimationLoop write SetAutoAnimationLoop default true;
@@ -261,7 +263,6 @@ type
     procedure Edit; override;
   end;
 
-type
   { Property editor to select an animation on TCastleSpine. }
   TSpineAutoAnimationPropertyEditor = class(TStringPropertyEditor)
   public
@@ -270,11 +271,9 @@ type
     procedure SetValue(const NewValue: String); override;
   end;
 
-  TSpineSkinPropertyEditor = class(TStringPropertyEditor)
+  TSpineSkinPropertyEditor = class(TStringsPropertyEditor)
   public
-    function GetAttributes: TPropertyAttributes; override;
-    procedure GetValues(Proc: TGetStrProc); override;
-    procedure SetValue(const NewValue: String); override;
+    procedure Edit; override;
   end;
 {$endif}
 
@@ -514,29 +513,64 @@ begin
   Scene.AutoAnimation := NewValue;
 end;
 
-function TSpineSkinPropertyEditor.GetAttributes: TPropertyAttributes;
-begin
-  Result := [paMultiSelect, paValueList, paSortList, paRevertable];
-end;
-
-procedure TSpineSkinPropertyEditor.GetValues(Proc: TGetStrProc);
+procedure TSpineSkinPropertyEditor.Edit;
 var
-  Scene: TCastleSpine;
+  DialogSelection: TExposeTransformSelection;
+  D: TExposeTransformsDialog;
+  ValueStrings, SelectionList: TStrings;
   S: String;
-begin
-  Proc('');
-  Scene := GetComponent(0) as TCastleSpine;
-  for S in Scene.SkinsList do
-    Proc(S);
-end;
-
-procedure TSpineSkinPropertyEditor.SetValue(const NewValue: String);
-var
+  SelItem: TExposeTransformSelectionItem;
   Scene: TCastleSpine;
+  Item: TExposeTransformSelectionItem;
+  I: Integer;
 begin
-  inherited SetValue(NewValue);
-  Scene := GetComponent(0) as TCastleSpine;
-  Scene.Skin := NewValue;
+  D := TExposeTransformsDialog.Create(Application);
+  try
+    Scene := GetComponent(0) as TCastleSpine;
+    D.Caption := 'Edit ' + Scene.Name + '.Skins';
+
+    DialogSelection := D.Selection;
+    DialogSelection.Clear;
+
+    // add to D.Selection all possible transforms from the scene
+    for I := 0 to Scene.SkinsList.Count - 1 do
+    begin
+      if DialogSelection.FindName(Scene.SkinsList[I]) = nil then
+      begin
+        Item := TExposeTransformSelectionItem.Create;
+        Item.Name := Scene.SkinsList[I];
+        Item.ExistsInScene := true;
+        Item.Selected := false; // may be changed to true later
+        DialogSelection.Add(Item);
+      end;
+    end;
+
+    // add/update in D.Selection all currently selected transforms
+    ValueStrings := TStrings(GetObjectValue);
+    for S in ValueStrings do
+      if S <> '' then
+      begin
+        SelItem := D.Selection.FindName(S);
+        if SelItem = nil then
+        begin
+          SelItem := TExposeTransformSelectionItem.Create;
+          SelItem.Name := S;
+          SelItem.ExistsInScene := false;
+          DialogSelection.Add(SelItem);
+        end;
+        SelItem.Selected := true
+      end;
+
+    D.UpdateSelectionUi;
+    if D.ShowModal = mrOK then
+    begin
+      SelectionList := DialogSelection.ToList;
+      try
+        SetPtrValue(SelectionList);
+      finally FreeAndNil(SelectionList) end;
+    end;
+    Modified;
+  finally FreeAndNil(D) end;
 end;
 {$endif}
 
@@ -614,7 +648,8 @@ var
   MS: TMemoryStream;
   SS: TStringStream;
   SpineData: PCastleSpineData;
-  I: Integer;
+  I, J: Integer;
+  HasCustomSkin: Boolean = False;
 begin
   Self.Cleanup;
 
@@ -677,6 +712,9 @@ begin
   // Create clipper
   Self.FspClipper := spSkeletonClipping_create();
 
+  // Create skin
+  Self.FspSkin := spSkin_create('___cge_skin');
+
   // Load animation list
   Self.AnimationsList.Clear;
   for I := 0 to SpineData^.SkeletonData^.animationsCount - 1 do
@@ -689,13 +727,24 @@ begin
 
   // Load skin
   Self.SkinsList.Clear;
+  SetLength(FspSkinArray, SpineData^.SkeletonData^.skinsCount);
   for I := 0 to SpineData^.SkeletonData^.skinsCount - 1 do
   begin
     Self.SkinsList.Add(SpineData^.SkeletonData^.skins[I]^.name);
+    Self.FspSkinArray[I] := SpineData^.SkeletonData^.skins[I];
     // Auto apply skin
-    if (SpineData^.SkeletonData^.skins[I]^.name = Self.FSkin) and (Self.FSkin <> '') then
-      spSkeleton_setSkinByName(Self.FspSkeleton, PChar(Self.FSkin));
+    for J := 0 to Self.FSkins.Count - 1 do
+    begin
+      if (SpineData^.SkeletonData^.skins[I]^.name = Self.FSkins[I]) then
+      begin
+        spSkin_addSkin(Self.FspSkin, SpineData^.SkeletonData^.skins[I]);
+        HasCustomSkin := True;
+        break;
+      end;
+    end;
   end;
+  if HasCustomSkin then
+    spSkeleton_setSkin(Self.FspSkeleton, Self.FspSkin);
 
   // Expose bone list
   Self.ExposeTransformsChange(nil);
@@ -716,10 +765,13 @@ begin
     spSkeletonBounds_dispose(Self.FspSkeletonBounds);
   if Self.FspClipper <> nil then
     spSkeletonClipping_dispose(Self.FspClipper);
+  if Self.FspSkin <> nil then
+    spSkin_dispose(Self.FspSkin);
   Self.FspSkeleton := nil;
   Self.FspAnimationState := nil;
   Self.FspSkeletonBounds := nil;
   Self.FspClipper := nil;
+  Self.FspSkin := nil;
   CurrentSpineInstance := nil;
 end;
 
@@ -847,13 +899,31 @@ begin
   Result := Self.FColor;
 end;
 
-procedure TCastleSpine.SetSkin(const S: String);
+procedure TCastleSpine.SetSkins(const Value: TStrings);
+var
+  I, J: Integer;
 begin
-  Self.FSkin := S;
+  Self.FSkins.Assign(Value);
   if Self.FspSkeleton <> nil then
   begin
-    spSkeleton_setSkinByName(Self.FspSkeleton, PChar(S));
-    spSkeleton_setSlotsToSetupPose(Self.FspSkeleton);
+    spSkin_clear(Self.FspSkin);
+    if Self.FSkins.Count > 0 then
+    begin
+      for J := 0 to Self.FSkinsList.Count - 1 do
+      begin
+        for I := 0 to Self.FSkins.Count - 1 do
+        begin
+          if Self.FSkinsList[J] = Self.FSkins[I] then
+          begin
+            spSkin_addSkin(Self.FspSkin, Self.FspSkinArray[J]);
+            break;
+          end;
+        end;
+      end;
+      spSkeleton_setSkin(Self.FspSkeleton, Self.FspSkin);
+      spSkeleton_setSlotsToSetupPose(Self.FspSkeleton);
+    end else
+      spSkeleton_setSkinByName(Self.FspSkeleton, nil);
   end;
 end;
 
@@ -865,6 +935,8 @@ begin
   Self.FParameters := TCastleSpinePlayAnimationParameters.Create;
   Self.FAutoAnimationLoop := True;
   Self.FExposeTransforms := TStringList.Create;
+  TStringList(Self.FExposeTransforms).Sorted := True;
+  Self.FSkins := TStringList.Create;
   Self.FControlBoneList := TCastleSpineControlBoneList.Create;
   Self.FTimePlayingSpeed := 1;
   Self.FTimePlaying := True;
@@ -884,6 +956,7 @@ begin
   Self.FParameters.Free;
   Self.FColorPersistent.Free;
   Self.FExposeTransforms.Free;
+  Self.FSkins.Free;
   Self.FControlBoneList.Free;
   Self.FAnimationsList.Free;
   Self.FSkinsList.Free;
@@ -901,7 +974,7 @@ begin
     or (PropertyName = 'ProcessEvents')
     or (PropertyName = 'TimePlaying')
     or (PropertyName = 'TimePlayingSpeed')
-    or (PropertyName = 'Skin')
+    or (PropertyName = 'Skins')
     or (PropertyName = 'URL') then
     Result := [psBasic]
   else
@@ -1336,7 +1409,7 @@ initialization
     TSpineAutoAnimationPropertyEditor);
   RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'URL',
     TSceneURLPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(AnsiString), TCastleSpine, 'Skin',
+  RegisterPropertyEditor(TypeInfo(TStrings), TCastleSpine, 'Skins',
     TSpineSkinPropertyEditor);
   {$endif}
   SpineDataCache := TCastleSpineDataCache.Create;
