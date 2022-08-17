@@ -191,6 +191,7 @@ type
     property AnimationsList: TStrings read FAnimationsList;
     property SkinsList: TStrings read FSkinsList;
     property Shader: TGLSLProgram read FShader write FShader;
+    property Bounds: PspSkeletonBounds read FspSkeletonBounds;
   published
     property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
     property DefaultAnimationTransition: Single read FDefaultAnimationTransition write FDefaultAnimationTransition default 0;
