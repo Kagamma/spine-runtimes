@@ -185,8 +185,10 @@ type
     function PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean; overload;
     { Similar to StopAnimation. The Track parameter tell Spine runtime which track we stop the animation. If Track = -1, then we stop all animations }
     procedure StopAnimation(const Track: Integer = -1); overload;
-    { Get the name of the first bounding box attachment contains the point, or '' if point is not inside any bounding box }
-    function ContainsPoint(const X, Y: Single): String;
+    { Get the names of the bounding boxes attachment contains the point, or nil if point is not inside any bounding box }
+    function ContainsPoint(const X, Y: Single): TStrings;
+    { Get the names of the bounding boxes attachment contains the point, or nil if point is not inside any bounding box }
+    function IntersectsSegment(const X1, Y1, X2, Y2: Single): TStrings;
     property Color: TVector4 read FColor write FColor;
     property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
     property AnimationsList: TStrings read FAnimationsList;
@@ -1370,11 +1372,34 @@ begin
     spAnimationState_clearTrack(Self.FspAnimationState, Track);
 end;
 
-function TCastleSpine.ContainsPoint(const X, Y: Single): String;
+function TCastleSpine.ContainsPoint(const X, Y: Single): TStrings;
+var
+  I: Integer;
 begin
-  Result := '';
+  Result := TStringList.Create;
   if spSkeletonBounds_aabbContainsPoint(Self.FspSkeletonBounds, X, Y) then
-    Result := String(spSkeletonBounds_containsPoint(Self.FspSkeletonBounds, X, Y));
+  begin
+    for I := 0 to Self.FspSkeletonBounds^.count - 1 do
+      if spPolygon_containsPoint(Self.FspSkeletonBounds^.polygons[I], X, Y) then
+        Result.Add(Self.FspSkeletonBounds^.boundingBoxes[I]^.super^.super.name);
+  end;
+  if Result.Count = 0 then
+    FreeAndNil(Result);
+end;
+
+function TCastleSpine.IntersectsSegment(const X1, Y1, X2, Y2: Single): TStrings;
+var
+  I: Integer;
+begin
+  Result := TStringList.Create;
+  if spSkeletonBounds_aabbIntersectsSegment(Self.FspSkeletonBounds, X1, Y1, X2, Y2) then
+  begin
+    for I := 0 to Self.FspSkeletonBounds^.count - 1 do
+      if spPolygon_intersectsSegment(Self.FspSkeletonBounds^.polygons[I], X1, Y1, X2, Y2) then
+        Result.Add(Self.FspSkeletonBounds^.boundingBoxes[I]^.super^.super.name);
+  end;
+  if Result.Count = 0 then
+    FreeAndNil(Result);
 end;
 
 procedure TCastleSpine.InternalPlayAnimation;

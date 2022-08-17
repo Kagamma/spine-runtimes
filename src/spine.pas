@@ -447,6 +447,10 @@ var
   spSkeleton_setSkinByName: function(Skeleton: PspSkeleton; Name: PChar): cint; SPINECALL;
   spSkeleton_setSlotsToSetupPose: procedure(Skeleton: PspSkeleton); SPINECALL;
 
+  // Polygon
+  spPolygon_containsPoint: function(Polygon: PspPolygon; X, Y: cfloat): cbool; SPINECALL;
+  spPolygon_intersectsSegment: function(Polygon: PspPolygon; X1, Y1, X2, Y2: cfloat): cbool; SPINECALL;
+
   // Skin
   spSkin_create: function(Name: PChar): PspSkin; SPINECALL;
   spSkin_dispose: procedure(Skin: PspSkin); SPINECALL;
@@ -482,6 +486,8 @@ var
   spSkeletonBounds_update: procedure(Bounds: PspSkeletonBounds; Skeleton: PspSkeleton; updateAabb: cbool); SPINECALL;
   spSkeletonBounds_aabbContainsPoint: function(Bounds: PspSkeletonBounds; X, Y: cfloat): cbool; SPINECALL;
   spSkeletonBounds_containsPoint: function(Bounds: PspSkeletonBounds; X, Y: cfloat): PspBoundingBoxAttachment; SPINECALL;
+  spSkeletonBounds_aabbIntersectsSegment: function(Bounds: PspSkeletonBounds; X1, Y1, X2, Y2: cfloat): cbool; SPINECALL;
+  spSkeletonBounds_intersectsSegment: function(Bounds: PspSkeletonBounds; X1, Y1, X2, Y2: cfloat): PspBoundingBoxAttachment; SPINECALL;
 
   // Attachment
   spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Slot: PspSlot; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
@@ -555,6 +561,10 @@ begin;
   spSkeleton_setSkinByName := GetProcedureAddress(Lib, 'spSkeleton_setSkinByName');
   spSkeleton_setSlotsToSetupPose := GetProcedureAddress(Lib, 'spSkeleton_setSlotsToSetupPose');
 
+  // Polygon
+  spPolygon_containsPoint := GetProcedureAddress(Lib, 'spPolygon_containsPoint');
+  spPolygon_intersectsSegment := GetProcedureAddress(Lib, 'spPolygon_intersectsSegment');
+
   // Skin
   spSkin_create := GetProcedureAddress(Lib, 'spSkin_create');
   spSkin_dispose := GetProcedureAddress(Lib, 'spSkin_dispose');
@@ -590,6 +600,8 @@ begin;
   spSkeletonBounds_update := GetProcedureAddress(Lib, 'spSkeletonBounds_update');
   spSkeletonBounds_aabbContainsPoint := GetProcedureAddress(Lib, 'spSkeletonBounds_aabbContainsPoint');
   spSkeletonBounds_containsPoint := GetProcedureAddress(Lib, 'spSkeletonBounds_containsPoint');
+  spSkeletonBounds_aabbIntersectsSegment := GetProcedureAddress(Lib, 'spSkeletonBounds_aabbIntersectsSegment');
+  spSkeletonBounds_intersectsSegment := GetProcedureAddress(Lib, 'spSkeletonBounds_intersectsSegment');
 
   // Attachment
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');
