@@ -568,6 +568,7 @@ begin
   try
     Scene := GetComponent(0) as TCastleSpine;
     D.Caption := 'Edit ' + Scene.Name + '.Skins';
+    D.Label1.Caption := '';
 
     DialogSelection := D.Selection;
     DialogSelection.Clear;
