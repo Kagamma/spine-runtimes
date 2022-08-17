@@ -82,7 +82,7 @@ type
   PspSkin = ^TspSkin;
   PspTimelineArray = Pointer;
   PspPropertyIdArray = Pointer;
-  PspBoundingBoxAttachment = Pointer;
+  PspBoundingBoxAttachment = ^TspBoundingBoxAttachment;
   PspPolygon = Pointer;
   PspClippingAttachment = Pointer;
   PspTriangulator = Pointer;
@@ -142,6 +142,11 @@ type
     scale: cfloat;
     attachmentLoader: PspAttachmentLoader;
     error: PChar;
+  end;
+
+  TspBoundingBoxAttachment = record
+    super: PspVertexAttachment;
+    color: TspColor;
   end;
 
   TspSkin = record
@@ -475,6 +480,8 @@ var
   spSkeletonBounds_create: function: PspSkeletonBounds; SPINECALL;
   spSkeletonBounds_dispose: procedure(Bounds: PspSkeletonBounds); SPINECALL;
   spSkeletonBounds_update: procedure(Bounds: PspSkeletonBounds; Skeleton: PspSkeleton; updateAabb: cbool); SPINECALL;
+  spSkeletonBounds_aabbContainsPoint: function(Bounds: PspSkeletonBounds; X, Y: cfloat): cbool; SPINECALL;
+  spSkeletonBounds_containsPoint: function(Bounds: PspSkeletonBounds; X, Y: cfloat): PspBoundingBoxAttachment; SPINECALL;
 
   // Attachment
   spRegionAttachment_computeWorldVertices: procedure(This: PspRegionAttachment; Slot: PspSlot; Vertices: pcfloat; Offset, Stride: cint); SPINECALL;
@@ -581,6 +588,8 @@ begin;
   spSkeletonBounds_create := GetProcedureAddress(Lib, 'spSkeletonBounds_create');
   spSkeletonBounds_dispose := GetProcedureAddress(Lib, 'spSkeletonBounds_dispose');
   spSkeletonBounds_update := GetProcedureAddress(Lib, 'spSkeletonBounds_update');
+  spSkeletonBounds_aabbContainsPoint := GetProcedureAddress(Lib, 'spSkeletonBounds_aabbContainsPoint');
+  spSkeletonBounds_containsPoint := GetProcedureAddress(Lib, 'spSkeletonBounds_containsPoint');
 
   // Attachment
   spRegionAttachment_computeWorldVertices := GetProcedureAddress(Lib, 'spRegionAttachment_computeWorldVertices');

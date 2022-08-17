@@ -185,12 +185,14 @@ type
     function PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean; overload;
     { Similar to StopAnimation. The Track parameter tell Spine runtime which track we stop the animation. If Track = -1, then we stop all animations }
     procedure StopAnimation(const Track: Integer = -1); overload;
+    { Get the name of the first bounding box attachment contains the point, or '' if point is not inside any bounding box }
+    function ContainsPoint(const X, Y: Single): String;
     property Color: TVector4 read FColor write FColor;
-    property Skeleton: PspSkeleton read FspSkeleton;
     property ControlBoneList: TCastleSpineControlBoneList read FControlBoneList;
     property AnimationsList: TStrings read FAnimationsList;
     property SkinsList: TStrings read FSkinsList;
     property Shader: TGLSLProgram read FShader write FShader;
+    property Skeleton: PspSkeleton read FspSkeleton;
     property Bounds: PspSkeletonBounds read FspSkeletonBounds;
   published
     property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
@@ -1365,6 +1367,13 @@ begin
     spAnimationState_clearTracks(Self.FspAnimationState)
   else
     spAnimationState_clearTrack(Self.FspAnimationState, Track);
+end;
+
+function TCastleSpine.ContainsPoint(const X, Y: Single): String;
+begin
+  Result := '';
+  if spSkeletonBounds_aabbContainsPoint(Self.FspSkeletonBounds, X, Y) then
+    Result := String(spSkeletonBounds_containsPoint(Self.FspSkeletonBounds, X, Y));
 end;
 
 procedure TCastleSpine.InternalPlayAnimation;
