@@ -13,6 +13,7 @@ Currently it provides support for Spine version 4.1. Make sure to download the c
 - Skeletal animations (can mix multiple animations on the same meshes)
 - Constraints (IK, Transform, Path)
 - Clipping attachments
+- Point attachments
 - Events
 
 ## How To Use
