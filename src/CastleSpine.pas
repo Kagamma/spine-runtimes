@@ -944,6 +944,7 @@ begin
   Self.FTimePlayingSpeed := 1;
   Self.FTimePlaying := True;
   Self.FAnimationsList := TstringList.Create;
+  TStringList(Self.FAnimationsList).Sorted := True;
   Self.FSkinsList := TStringList.Create;
   TStringList(Self.FExposeTransforms).OnChange := @Self.ExposeTransformsChange;
   Self.FColorPersistent := CreateColorPersistent(
