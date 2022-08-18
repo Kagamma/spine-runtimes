@@ -528,6 +528,7 @@ var
   Skeleton: PspSkeleton;
   Scene: TCastleSpine;
   Item: TExposeTransformSelectionItem;
+  NamesList: TStrings;
   I: Integer;
 begin
   D := TExposeTransformsDialog.Create(Application);
@@ -542,17 +543,24 @@ begin
 
     // add to D.Selection all possible transforms from the scene
     if Skeleton <> nil then
+    begin
+      NamesList := TStringList.Create;
+      TstringList(NamesList).Sorted := True;
       for I := 0 to Skeleton^.bonesCount - 1 do
+        NamesList.Add(Skeleton^.bones[I]^.data^.name);
+      for I := 0 to NamesList.Count - 1 do
       begin
-        if DialogSelection.FindName(Skeleton^.bones[I]^.data^.name) = nil then
+        if DialogSelection.FindName(NamesList[I]) = nil then
         begin
           Item := TExposeTransformSelectionItem.Create;
-          Item.Name := Skeleton^.bones[I]^.data^.name;
+          Item.Name := NamesList[I];
           Item.ExistsInScene := true;
           Item.Selected := false; // may be changed to true later
           DialogSelection.Add(Item);
         end;
       end;
+      NamesList.Free;
+    end;
 
     // add/update in D.Selection all currently selected transforms
     ValueStrings := TStrings(GetObjectValue);
@@ -1092,7 +1100,6 @@ begin
   Self.FAutoAnimations := TStringList.Create;
   Self.FAutoAnimationsLoop := True;
   Self.FExposeTransforms := TStringList.Create;
-  TStringList(Self.FExposeTransforms).Sorted := True;
   Self.FSkins := TStringList.Create;
   Self.FControlBoneList := TCastleSpineControlBoneList.Create;
   Self.FTimePlayingSpeed := 1;
