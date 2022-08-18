@@ -94,12 +94,22 @@ type
   TCastleSpineTransformBehavior = class(TCastleBehavior)
   private
     FControlBone: Boolean;
+    FControlRootPersistent: TCastleVector3Persistent;
+    FControlAreaPersistent: TCastleVector2Persistent;
+    FControlRoot: TVector3;
+    FControlArea: TVector2;
     FOldTranslation: TVector3;
     FOldRotation: Single;
     FOldData: TCastleSpineControlBone;
     FBone: PspBone;
     FBoneDefault: PspBone;
+    procedure SetControlRootForPersistent(const AValue: TVector3);
+    procedure SetControlAreaForPersistent(const AValue: TVector2);
+    function GetControlRootForPersistent: TVector3;
+    function GetControlAreaForPersistent: TVector2;
   public
+    constructor Create(AOwner: TComponent);
+    destructor Destroy; override;
     {$ifdef CASTLE_DESIGN_MODE}
     function PropertySections(const PropertyName: String): TPropertySections; override;
     {$endif}
@@ -107,8 +117,12 @@ type
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     property Bone: PspBone read FBone write FBone;
     property BoneDefault: PspBone read FBoneDefault write FBoneDefault;
+    property ControlRoot: TVector3 read FControlRoot write FControlRoot;
+    property ControlArea: TVector2 read FControlArea write FControlArea;
   published
     property ControlBone: Boolean read FControlBone write SetControlBone default False;
+    property ControlRootPersistent: TCastleVector3Persistent read FControlRootPersistent;
+    property ControlAreaPersistent: TCastleVector2Persistent read FControlAreaPersistent;
   end;
 
   TCastleSpine = class(TCastleTransform)
@@ -218,6 +232,9 @@ var
   SpineDataCache: TCastleSpineDataCache;
 
 implementation
+
+uses
+  Math;
 
 const
   VertexShaderSource =
@@ -335,6 +352,22 @@ begin
   Result.InternalDefaultValue := ADefaultValue;
 end;
 
+function CreateVec2Persistent(const G: TGetVector2Event; const S: TSetVector2Event; const ADefaultValue: TVector2): TCastleVector2Persistent;
+begin
+  Result := TCastleVector2Persistent.Create;
+  Result.InternalGetValue := G;
+  Result.InternalSetValue := S;
+  Result.InternalDefaultValue := ADefaultValue;
+end;
+
+function CreateVec3Persistent(const G: TGetVector3Event; const S: TSetVector3Event; const ADefaultValue: TVector3): TCastleVector3Persistent;
+begin
+  Result := TCastleVector3Persistent.Create;
+  Result.InternalGetValue := G;
+  Result.InternalSetValue := S;
+  Result.InternalDefaultValue := ADefaultValue;
+end;
+
 { Naive implementation of util function that takes a bone name and convert to valid component name }
 function ValidName(const S: String): String;
 begin
@@ -358,11 +391,55 @@ end;
 
 { ----- TCastleSpineTransformBehavior ----- }
 
+procedure TCastleSpineTransformBehavior.SetControlRootForPersistent(const AValue: TVector3);
+begin
+  Self.FControlRoot := AValue;
+end;
+
+procedure TCastleSpineTransformBehavior.SetControlAreaForPersistent(const AValue: TVector2);
+begin
+  Self.FControlArea := AValue;
+end;
+
+function TCastleSpineTransformBehavior.GetControlRootForPersistent: TVector3;
+begin
+  Result := Self.FControlRoot;
+end;
+
+function TCastleSpineTransformBehavior.GetControlAreaForPersistent: TVector2;
+begin
+  Result := Self.FControlArea;
+end;
+
+constructor TCastleSpineTransformBehavior.Create(AOwner: TComponent);
+begin
+  inherited;
+  Self.FControlRootPersistent := CreateVec3Persistent(
+    @Self.GetControlRootForPersistent,
+    @Self.SetControlRootForPersistent,
+    Self.FControlRoot
+  );
+  Self.FControlAreaPersistent := CreateVec2Persistent(
+    @Self.GetControlAreaForPersistent,
+    @Self.SetControlAreaForPersistent,
+    Self.FControlArea
+  );
+end;
+
+destructor TCastleSpineTransformBehavior.Destroy;
+begin
+  Self.FControlRootPersistent.Free;
+  Self.FControlAreaPersistent.Free;
+  inherited;
+end;
+
 {$ifdef CASTLE_DESIGN_MODE}
 function TCastleSpineTransformBehavior.PropertySections(
   const PropertyName: String): TPropertySections;
 begin
-  if (PropertyName = 'ControlBone') then
+  if (PropertyName = 'ControlBone')
+    or (PropertyName = 'ControlRootPersistent')
+    or (PropertyName = 'ControlAreaPersistent') then
     Result := [psBasic]
   else
     Result := inherited PropertySections(PropertyName);
@@ -387,6 +464,28 @@ var
     Self.Parent.Scale := Vector3(spBone_getWorldScaleX(Bone), spBone_getWorldScaleY(Bone), 1);
   end;
 
+  procedure UpdateParentPositionBaseOnArea; inline;
+  var
+    V: Single;
+    AX, AY: Single;
+  begin
+    // Only if area <> (0,0)
+    if Self.FControlArea.X <> 0 then
+    begin
+      AX := Self.FControlArea.X * 0.5;
+      V := Self.FControlRoot.X - Self.Parent.Translation.X;
+      if Abs(V) > AX then
+        Self.Parent.Translation := Vector3(Self.FControlRoot.X + (AX * (-(Sign(V)))), Self.Parent.Translation.Y, Self.Parent.Translation.Z);
+    end;
+    if Self.FControlArea.Y <> 0 then
+    begin
+      AY := Self.FControlArea.Y * 0.5;
+      V := Self.FControlRoot.Y - Self.Parent.Translation.Y;
+      if Abs(V) > AY then
+        Self.Parent.Translation := Vector3(Self.Parent.Translation.X, Self.FControlRoot.Y + (AY * (-(Sign(V)))), Self.Parent.Translation.Z);
+    end;
+  end;
+
 begin
   inherited;
   if Bone = nil then Exit;
@@ -395,6 +494,7 @@ begin
     UpdateParentPosition;
   end else
   begin
+    UpdateParentPositionBaseOnArea;
     if (Self.FOldTranslation.X <> Self.Parent.Translation.X) or (Self.FOldTranslation.Y <> Self.Parent.Translation.Y) or (Self.FOldRotation <> Self.Parent.Rotation.W) then
     begin
       Bone^ := Self.FBoneDefault^;
@@ -414,9 +514,10 @@ begin
   Self.FOldRotation := Self.Parent.Rotation.W;
 end;
 
+{$ifdef CASTLE_DESIGN_MODE}
+
 { ----- TExposeTransformsPropertyEditor ----- }
 
-{$ifdef CASTLE_DESIGN_MODE}
 procedure TExposeTransformsPropertyEditor.Edit;
 var
   DialogSelection: TExposeTransformSelection;
@@ -481,6 +582,8 @@ begin
   finally FreeAndNil(D) end;
 end;
 
+{ ----- TSpineAutoAnimationPropertyEditor ----- }
+
 procedure TSpineAutoAnimationPropertyEditor.Edit;
 var
   DialogSelection: TExposeTransformSelection;
@@ -541,6 +644,8 @@ begin
     Modified;
   finally FreeAndNil(D) end;
 end;
+
+{ ----- TSpineSkinPropertyEditor ----- }
 
 procedure TSpineSkinPropertyEditor.Edit;
 var
