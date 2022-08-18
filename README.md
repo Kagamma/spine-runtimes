@@ -24,5 +24,7 @@ Currently it provides support for Spine version 4.1. Make sure to download the c
 - Then you can use CastleSpine unit and TCastleSpine component from your code. TCastleSpine is a regular TCastleTransform descendant, just add it to your viewport.
 - To have it available in CGE editor too, add CastleSpine unit to editor_units in your CastleEngineManifest.xml . Next time you open the project in CGE editor, it will ask you to rebuild the editor with custom components. Once the build is completed, copy dynamic library to <your_project>/castle-engine-output/editor. Once you do this, you will have an editor where you can visually add and modify TCastleSpine components, just like standard CGE TCastleScenes.
 
-## API Reference
-- TODO
+## TODOs:
+- Currently `DefaultAnimationTransition` only works when only 1 animation is played.
+- `ControlBone` not working properly if the bone is not a child of root bone.
+- API Reference
