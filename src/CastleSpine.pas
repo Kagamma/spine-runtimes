@@ -1073,6 +1073,8 @@ begin
           end;
         end;
       end;
+      spSkeleton_setSkinByName(Self.FspSkeleton, nil);
+      spSkeleton_setSlotsToSetupPose(Self.FspSkeleton);
       spSkeleton_setSkin(Self.FspSkeleton, Self.FspSkin);
       spSkeleton_setSlotsToSetupPose(Self.FspSkeleton);
     end else
