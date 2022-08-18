@@ -108,7 +108,7 @@ type
     function GetControlRootForPersistent: TVector3;
     function GetControlAreaForPersistent: TVector2;
   public
-    constructor Create(AOwner: TComponent);
+    constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     {$ifdef CASTLE_DESIGN_MODE}
     function PropertySections(const PropertyName: String): TPropertySections; override;
@@ -346,7 +346,7 @@ end;
 
 function CreateColorPersistent(const G: TGetVector4Event; const S: TSetVector4Event; const ADefaultValue: TVector4): TCastleColorPersistent;
 begin
-  Result := TCastleColorPersistent.Create;
+  Result := TCastleColorPersistent.Create(nil);
   Result.InternalGetValue := G;
   Result.InternalSetValue := S;
   Result.InternalDefaultValue := ADefaultValue;
@@ -354,7 +354,7 @@ end;
 
 function CreateVec2Persistent(const G: TGetVector2Event; const S: TSetVector2Event; const ADefaultValue: TVector2): TCastleVector2Persistent;
 begin
-  Result := TCastleVector2Persistent.Create;
+  Result := TCastleVector2Persistent.Create(nil);
   Result.InternalGetValue := G;
   Result.InternalSetValue := S;
   Result.InternalDefaultValue := ADefaultValue;
@@ -362,7 +362,7 @@ end;
 
 function CreateVec3Persistent(const G: TGetVector3Event; const S: TSetVector3Event; const ADefaultValue: TVector3): TCastleVector3Persistent;
 begin
-  Result := TCastleVector3Persistent.Create;
+  Result := TCastleVector3Persistent.Create(nil);
   Result.InternalGetValue := G;
   Result.InternalSetValue := S;
   Result.InternalDefaultValue := ADefaultValue;
@@ -967,6 +967,13 @@ begin
             T := TCastleTransform.Create(Self);
             T.Name := TransformName;
             Self.Add(T);
+            B := TCastleSpineTransformBehavior.Create(T);
+            B.Name := T.Name + '_Behavior';
+            T.AddBehavior(B);
+          end;
+          // Not sure if necessary, since B should never be nil
+          if B = nil then
+          begin
             B := TCastleSpineTransformBehavior.Create(T);
             B.Name := T.Name + '_Behavior';
             T.AddBehavior(B);
