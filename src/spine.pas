@@ -22,6 +22,12 @@ type
   TspBlendMode = (
     SP_BLEND_MODE_NORMAL, SP_BLEND_MODE_ADDITIVE, SP_BLEND_MODE_MULTIPLY, SP_BLEND_MODE_SCREEN
   );
+  TspMixBlend = (
+    SP_MIX_BLEND_SETUP,
+    SP_MIX_BLEND_FIRST,
+    SP_MIX_BLEND_REPLACE,
+    SP_MIX_BLEND_ADD
+  );
   TspAttachmentType = (
     SP_ATTACHMENT_REGION,
     SP_ATTACHMENT_BOUNDING_BOX,
@@ -74,7 +80,9 @@ type
   {$packenum 1}
 
   PspFloatArray = ^TspFloatArray;
+  PspIntArray = ^TspIntArray;
   PspUnsignedShortArray = ^TspUnsignedShortArray;
+  PspTrackEntryArray = ^TspTrackEntryArray;
   PspKeyValueArray = Pointer;
   PspAttachmentLoader = Pointer;
   PspSkeletonJson = ^TspSkeletonJson;
@@ -126,6 +134,12 @@ type
   end;
   PspColor = ^TspColor;
 
+  TspIntArray = record
+    size: cint;
+    capacity: cint;
+    items: pcint;
+  end;
+
   TspFloatArray = record
     size: cint;
     capacity: cint;
@@ -136,6 +150,12 @@ type
     size: cint;
     capacity: cint;
     items: pcushort;
+  end;
+
+  TspTrackEntryArray = record
+    size: cint;
+    capacity: cint;
+    items: ^PspTrackEntry;
   end;
 
   TspSkeletonJson = record
@@ -293,8 +313,8 @@ type
     name: PChar;
     x, y: cint;
     index_: cint;
-    splits: ^cint;
-    pads: ^cint;
+    splits: pcint;
+    pads: pcint;
     keyValues: PspKeyValueArray;
     page: PspAtlasPage;
     next: PspAtlasRegion;
@@ -356,9 +376,9 @@ type
   TspVertexAttachment = record
     super: TspAttachment;
     bonesCount: cint;
-    bones: ^cint;
+    bones: pcint;
     verticesCount: cint;
-    vertices: ^cfloat;
+    vertices: pcfloat;
     worldVerticesLength: cint;
     deformAttachment: PspVertexAttachment;
     id: cint;
@@ -370,15 +390,15 @@ type
     region: PspTextureRegion;
     sequence: PspSequence;
     path: PChar;
-    regionUVs: ^cfloat;
-    uvs: ^cfloat;
+    regionUVs: pcfloat;
+    uvs: pcfloat;
     trianglesCount: cint;
-    triangles: ^cushort;
+    triangles: pcushort;
     color: TspColor;
     hullLength: cint;
     parentMesh: PspMeshAttachment;
     edgesCount: cint;
-    edges: ^cint;
+    edges: pcint;
     width, height: cfloat;
   end;
 
@@ -392,7 +412,13 @@ type
     animationStart, animationEnd, animationLast, nextAnimationLast: cfloat;
     delay, trackTime, trackLast, nextTrackLast, trackEnd, timeScale: cfloat;
     alpha, mixTime, mixDuration, interruptAlpha, totalAlpha: cfloat;
-    // TODO: Still missing fields
+	  mixBlend: TspMixBlend;
+	  timelineMode: PspIntArray;
+	  timelineHoldMix: PspTrackEntryArray;
+    timelinesRotation: pcfloat;
+    timelinesRotationCount: cint;
+    rendererObject: Pointer;
+    userData: Pointer;
   end;
 
   TspEvent = record
