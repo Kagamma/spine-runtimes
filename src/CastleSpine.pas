@@ -545,21 +545,24 @@ begin
     if Skeleton <> nil then
     begin
       NamesList := TStringList.Create;
-      TstringList(NamesList).Sorted := True;
-      for I := 0 to Skeleton^.bonesCount - 1 do
-        NamesList.Add(Skeleton^.bones[I]^.data^.name);
-      for I := 0 to NamesList.Count - 1 do
-      begin
-        if DialogSelection.FindName(NamesList[I]) = nil then
+      try
+        TstringList(NamesList).Sorted := True;
+        for I := 0 to Skeleton^.bonesCount - 1 do
+          NamesList.Add(Skeleton^.bones[I]^.data^.name);
+        for I := 0 to NamesList.Count - 1 do
         begin
-          Item := TExposeTransformSelectionItem.Create;
-          Item.Name := NamesList[I];
-          Item.ExistsInScene := true;
-          Item.Selected := false; // may be changed to true later
-          DialogSelection.Add(Item);
+          if DialogSelection.FindName(NamesList[I]) = nil then
+          begin
+            Item := TExposeTransformSelectionItem.Create;
+            Item.Name := NamesList[I];
+            Item.ExistsInScene := true;
+            Item.Selected := false; // may be changed to true later
+            DialogSelection.Add(Item);
+          end;
         end;
+      finally
+        NamesList.Free;
       end;
-      NamesList.Free;
     end;
 
     // add/update in D.Selection all currently selected transforms
@@ -818,6 +821,8 @@ begin
     // Load atlas
     MS := Download(AtlasFullPath, [soForceMemoryStream]) as TMemoryStream;
     SpineData^.Atlas := spAtlas_create(MS.Memory, MS.Size, PChar(Path), nil);
+    if SpineData^.Atlas = nil then
+      raise Exception.Create('Failed to load spine atlas');
     MS.Free;
 
     // Load skeleton data
@@ -826,6 +831,8 @@ begin
     try
       SS.CopyFrom(MS, MS.Size);
       SpineData^.SkeletonJson := spSkeletonJson_create(SpineData^.Atlas);
+      if SpineData^.SkeletonJson = nil then
+        raise Exception.Create('Failed to load spine model');
       SpineData^.SkeletonData := spSkeletonJson_readSkeletonData(SpineData^.SkeletonJson, PChar(SS.DataString));
     finally
       SS.Free;
