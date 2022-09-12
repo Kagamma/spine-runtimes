@@ -302,6 +302,15 @@ var
   RegionIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
   CurrentSpineInstance: TCastleSpine;
 
+{ Call when OpenGL context is closed }
+procedure FreeGLContext;
+begin
+  if RenderProgram <> nil then
+  begin
+    FreeAndNil(RenderProgram);
+  end;
+end;
+
 { Provide loader functions for Spine }
 procedure LoaderLoad(FileName: PChar; var Data: Pointer; var Size: LongWord); cdecl;
 var
@@ -757,6 +766,7 @@ begin
     RenderProgram.AttachVertexShader(VertexShaderSource);
     RenderProgram.AttachFragmentShader(FragmentShaderSource);
     RenderProgram.Link;
+    ApplicationProperties.OnGLContextClose.Add(@FreeGLContext);
   end;
   Self.FShader := RenderProgram;
   if VBO = 0 then
