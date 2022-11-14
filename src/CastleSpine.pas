@@ -48,6 +48,7 @@ type
     Name: String;
     Loop: Boolean;
     Forward: Boolean;
+    TimeScale: Single;
     TransitionDuration: Single;
     InitialTime: Single;
     Track: Integer;
@@ -1536,6 +1537,7 @@ begin
   Parameters.Forward := Forward;
   Parameters.TransitionDuration := Self.DefaultAnimationTransition;
   Parameters.InitialTime := 0;
+  Parameters.TimeScale := 1;
   Parameters.Track := Track;
   Self.FParametersList.Add(Parameters);
   Self.FIsAnimationPlaying := True;
@@ -1617,6 +1619,7 @@ begin
       TrackEntry := spAnimationState_setAnimationByName(Self.FspAnimationState, Parameters.Track, PChar(Parameters.Name), Parameters.Loop);
       TrackEntry^.reverse := Integer(not Parameters.Forward);
       TrackEntry^.trackTime := Parameters.InitialTime;
+      TrackEntry^.timeScale := Parameters.TimeScale;
     end;
   end;
   Self.FParametersList.Clear;

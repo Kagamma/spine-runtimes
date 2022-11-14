@@ -412,9 +412,9 @@ type
     animationStart, animationEnd, animationLast, nextAnimationLast: cfloat;
     delay, trackTime, trackLast, nextTrackLast, trackEnd, timeScale: cfloat;
     alpha, mixTime, mixDuration, interruptAlpha, totalAlpha: cfloat;
-	  mixBlend: TspMixBlend;
-	  timelineMode: PspIntArray;
-	  timelineHoldMix: PspTrackEntryArray;
+    mixBlend: TspMixBlend;
+    timelineMode: PspIntArray;
+    timelineHoldMix: PspTrackEntryArray;
     timelinesRotation: pcfloat;
     timelinesRotationCount: cint;
     rendererObject: Pointer;
