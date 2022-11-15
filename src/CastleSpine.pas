@@ -183,6 +183,8 @@ type
     function GetColorForPersistent: TVector4;
     procedure SetSkins(const Value: TStrings);
   public
+    { Keep track of track entries }
+    TrackEntries: array[0..29] of PspTrackEntry;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     {$ifdef CASTLE_DESIGN_MODE}
@@ -1138,6 +1140,7 @@ begin
     @Self.SetColorForPersistent,
     Self.FColor
   );
+  FillChar(TrackEntries[0], SizeOf(TspTrackEntry) * Length(TrackEntries), 0);
 end;
 
 destructor TCastleSpine.Destroy;
@@ -1552,8 +1555,13 @@ begin
   begin
     spAnimationState_clearTracks(Self.FspAnimationState);
     spSkeleton_setToSetupPose(Self.FspSkeleton);
+    FillChar(TrackEntries[0], SizeOf(TspTrackEntry) * Length(TrackEntries), 0);
   end else
+  begin
     spAnimationState_clearTrack(Self.FspAnimationState, Track);
+    if Track < Length(Self.TrackEntries) then
+      Self.TrackEntries[Track] := nil;
+  end;
 end;
 
 function TCastleSpine.ContainsPoint(const X, Y: Single): TStrings;
@@ -1620,6 +1628,8 @@ begin
       TrackEntry^.reverse := Integer(not Parameters.Forward);
       TrackEntry^.trackTime := Parameters.InitialTime;
       TrackEntry^.timeScale := Parameters.TimeScale;
+      if Parameters.Track < Length(Self.TrackEntries) then
+        Self.TrackEntries[Parameters.Track] := TrackEntry;
     end;
   end;
   Self.FParametersList.Clear;
