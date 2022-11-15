@@ -1140,7 +1140,7 @@ begin
     @Self.SetColorForPersistent,
     Self.FColor
   );
-  FillChar(TrackEntries[0], SizeOf(TspTrackEntry) * Length(TrackEntries), 0);
+  FillChar(Self.TrackEntries, SizeOf(PspTrackEntry) * Length(TrackEntries), 0);
 end;
 
 destructor TCastleSpine.Destroy;
@@ -1555,7 +1555,7 @@ begin
   begin
     spAnimationState_clearTracks(Self.FspAnimationState);
     spSkeleton_setToSetupPose(Self.FspSkeleton);
-    FillChar(TrackEntries[0], SizeOf(TspTrackEntry) * Length(TrackEntries), 0);
+    FillChar(Self.TrackEntries, SizeOf(PspTrackEntry) * Length(TrackEntries), 0);
   end else
   begin
     spAnimationState_clearTrack(Self.FspAnimationState, Track);
