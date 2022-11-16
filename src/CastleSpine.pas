@@ -174,7 +174,6 @@ type
     procedure ExposeTransformsChange(Sender: TObject);
     procedure GLContextOpen;
     procedure InternalLoadSpine;
-    procedure InternalPlayAnimation;
     procedure SetAutoAnimations(const Value: TStrings);
     procedure SetAutoAnimationsLoop(const V: Boolean);
     procedure SetColorForPersistent(const AValue: TVector4);
@@ -195,6 +194,7 @@ type
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     procedure LocalRender(const Params: TRenderParams); override;
     function LocalBoundingBox: TBox3D; override;
+    procedure InternalPlayAnimation;
     { Similar to PlayAnimation. The Track parameter tell Spine runtime which track we play the animation, allows to mix multiple animations }
     function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true; const Track: Integer = 0): boolean; overload;
     function PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean; overload;
