@@ -407,7 +407,7 @@ type
     previous, next, mixingFrom, mixingTo: PspTrackEntry;
     listener: Pointer;
     trackIndex: cint;
-    loop, holdPrevious, reverse: cint;
+    loop, holdPrevious, reverse, shortestRotation: cint;
     eventThreshold, attachmentThreshold, drawOrderThreshold: cfloat;
     animationStart, animationEnd, animationLast, nextAnimationLast: cfloat;
     delay, trackTime, trackLast, nextTrackLast, trackEnd, timeScale: cfloat;
