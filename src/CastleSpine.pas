@@ -211,6 +211,7 @@ type
     property Shader: TGLSLProgram read FShader write FShader;
     property Skeleton: PspSkeleton read FspSkeleton;
     property Bounds: PspSkeletonBounds read FspSkeletonBounds;
+    property IsGLContextInitialized: Boolean read FIsGLContextInitialized;
   published
     property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
     property DefaultAnimationTransition: Single read FDefaultAnimationTransition write FDefaultAnimationTransition default 0;
