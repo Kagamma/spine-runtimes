@@ -183,7 +183,7 @@ type
     procedure SetSkins(const Value: TStrings);
   public
     { Keep track of track entries }
-    TrackEntries: array[0..29] of PspTrackEntry;
+    TrackEntries: array[0..99] of PspTrackEntry;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     {$ifdef CASTLE_DESIGN_MODE}
