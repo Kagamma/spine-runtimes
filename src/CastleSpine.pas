@@ -81,6 +81,7 @@ type
   TCastleSpineData = record
     Atlas: PspAtlas;
     SkeletonJson: PspSkeletonJson;
+    SkeletonBinary: PspSkeletonBinary;
     SkeletonData: PspSkeletonData;
     AnimationStateData: PspAnimationStateData;
   end;
@@ -744,7 +745,11 @@ begin
   begin
     SpineData := Self[Key];
     spAtlas_dispose(SpineData^.Atlas);
-    spSkeletonJson_dispose(SpineData^.SkeletonJson);
+    if SpineData^.SkeletonJson <> nil then
+      spSkeletonJson_dispose(SpineData^.SkeletonJson)
+    else
+    if SpineData^.SkeletonBinary <> nil then
+      spSkeletonBinary_dispose(SpineData^.SkeletonBinary);
     spSkeletonData_dispose(SpineData^.SkeletonData);
     spAnimationStateData_dispose(SpineData^.AnimationStateData);
     Dispose(SpineData);
@@ -810,6 +815,7 @@ var
   SpineData: PCastleSpineData;
   I, J: Integer;
   HasCustomSkin: Boolean = False;
+  IsBinary: Boolean = False;
 begin
   Self.Cleanup;
 
@@ -830,6 +836,7 @@ begin
 
     Path := ExtractFilePath(Self.FURL);
     SkeletonFullPath := Self.FURL;
+    IsBinary := LowerCase(ExtractFileExt(SkeletonFullPath)) = '.skel';
     AtlasFullPath := Path + StringReplace(ExtractFileName(Self.FURL), ExtractFileExt(Self.FURL), '', [rfReplaceAll]) + '.atlas';
 
     // Load atlas
@@ -841,15 +848,26 @@ begin
 
     // Load skeleton data
     MS := Download(SkeletonFullPath, [soForceMemoryStream]) as TMemoryStream;
-    SS := TStringStream.Create('');
-    try
-      SS.CopyFrom(MS, MS.Size);
-      SpineData^.SkeletonJson := spSkeletonJson_create(SpineData^.Atlas);
-      if SpineData^.SkeletonJson = nil then
-        raise Exception.Create('Failed to load spine model');
-      SpineData^.SkeletonData := spSkeletonJson_readSkeletonData(SpineData^.SkeletonJson, PChar(SS.DataString));
-    finally
-      SS.Free;
+    if not IsBinary then
+    begin
+      SS := TStringStream.Create('');
+      try
+        SS.CopyFrom(MS, MS.Size);
+        SpineData^.SkeletonBinary := nil;
+        SpineData^.SkeletonJson := spSkeletonJson_create(SpineData^.Atlas);
+        if SpineData^.SkeletonJson = nil then
+          raise Exception.Create('Failed to load Spine JSON model');
+        SpineData^.SkeletonData := spSkeletonJson_readSkeletonData(SpineData^.SkeletonJson, PChar(SS.DataString));
+      finally
+        SS.Free;
+      end;
+    end else
+    begin
+      SpineData^.SkeletonJson := nil;
+      SpineData^.SkeletonBinary := spSkeletonBinary_create(SpineData^.Atlas);
+      if SpineData^.SkeletonBinary = nil then
+        raise Exception.Create('Failed to load Spine JSON model');
+      SpineData^.SkeletonData := spSkeletonBinary_readSkeletonData(SpineData^.SkeletonBinary, MS.Memory, MS.Size);
     end;
     MS.Free;
 

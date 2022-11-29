@@ -86,6 +86,7 @@ type
   PspKeyValueArray = Pointer;
   PspAttachmentLoader = Pointer;
   PspSkeletonJson = ^TspSkeletonJson;
+  PspSkeletonBinary = Pointer;
   PspBoneData = ^TspBoneData;
   PspSkin = ^TspSkin;
   PspTimelineArray = Pointer;
@@ -459,6 +460,9 @@ var
   spAtlas_dispose: procedure(Atlas: PspAtlas); SPINECALL;
 
   // Skeleton
+  spSkeletonBinary_create: function(Atlas: PspAtlas): PspSkeletonJson; SPINECALL;
+  spSkeletonBinary_readSkeletonData: function(SkeletonBinary: PspSkeletonBinary; Data: Pointer; Len: Integer): PspSkeletonBinary; SPINECALL;
+  spSkeletonBinary_dispose: procedure(SkeletonBinary: PspSkeletonBinary); SPINECALL;
   spSkeletonJson_create: function(Atlas: PspAtlas): PspSkeletonJson; SPINECALL;
   spSkeletonJson_readSkeletonData: function(SkeletonJson: PspSkeletonJson; Data: PChar): PspSkeletonData; SPINECALL;
   spSkeletonJson_dispose: procedure(SkeletonJson: PspSkeletonJson); SPINECALL;
@@ -574,6 +578,9 @@ begin;
   spAtlas_dispose := GetProcedureAddress(Lib, 'spAtlas_dispose');
 
   // Skeleton
+  spSkeletonBinary_create := GetProcedureAddress(Lib, 'spSkeletonBinary_create');
+  spSkeletonBinary_readSkeletonData := GetProcedureAddress(Lib, 'spSkeletonBinary_readSkeletonData');
+  spSkeletonBinary_dispose := GetProcedureAddress(Lib, 'spSkeletonBinary_dispose');
   spSkeletonJson_create := GetProcedureAddress(Lib, 'spSkeletonJson_create');
   spSkeletonJson_readSkeletonData := GetProcedureAddress(Lib, 'spSkeletonJson_readSkeletonData');
   spSkeletonJson_dispose := GetProcedureAddress(Lib, 'spSkeletonJson_dispose');
