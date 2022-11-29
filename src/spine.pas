@@ -460,7 +460,7 @@ var
   spAtlas_dispose: procedure(Atlas: PspAtlas); SPINECALL;
 
   // Skeleton
-  spSkeletonBinary_create: function(Atlas: PspAtlas): PspSkeletonJson; SPINECALL;
+  spSkeletonBinary_create: function(Atlas: PspAtlas): PspSkeletonBinary; SPINECALL;
   spSkeletonBinary_readSkeletonData: function(SkeletonBinary: PspSkeletonBinary; Data: Pointer; Len: Integer): PspSkeletonBinary; SPINECALL;
   spSkeletonBinary_dispose: procedure(SkeletonBinary: PspSkeletonBinary); SPINECALL;
   spSkeletonJson_create: function(Atlas: PspAtlas): PspSkeletonJson; SPINECALL;
