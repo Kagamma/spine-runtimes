@@ -866,7 +866,7 @@ begin
       SpineData^.SkeletonJson := nil;
       SpineData^.SkeletonBinary := spSkeletonBinary_create(SpineData^.Atlas);
       if SpineData^.SkeletonBinary = nil then
-        raise Exception.Create('Failed to load Spine JSON model');
+        raise Exception.Create('Failed to load Spine Binary model');
       SpineData^.SkeletonData := spSkeletonBinary_readSkeletonData(SpineData^.SkeletonBinary, MS.Memory, MS.Size);
     end;
     MS.Free;
