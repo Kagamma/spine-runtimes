@@ -41,7 +41,7 @@ uses
   {$endif}
   CastleVectors, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
-  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors;
+  CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors, CastleRenderOptions;
 
 type
   TCastleSpinePlayAnimationParameters = record
@@ -1387,17 +1387,17 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
           begin
             case Slot^.data^.blendMode of
               SP_BLEND_MODE_ADDITIVE:
-                glBlendFunc(GL_ONE, GL_ONE);
+                RenderContext.BlendingEnable(bsOne, bdOne);
               else
-                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                RenderContext.BlendingEnable(bsOne, bdOneMinusSrcAlpha);
             end;
           end else
           begin
             case Slot^.data^.blendMode of
               SP_BLEND_MODE_ADDITIVE:
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+                RenderContext.BlendingEnable(bsSrcAlpha, bdOne);
               else
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                RenderContext.BlendingEnable(bsSrcAlpha, bdOneMinusSrcAlpha);
             end;
           end;
         end;
@@ -1497,13 +1497,11 @@ begin
     Self.FShader.Uniform('fogEnable').SetValue(0);
 
   glEnable(GL_DEPTH_TEST);
-  glEnable(GL_BLEND);
   glDepthMask(GL_FALSE);
   glActiveTexture(GL_TEXTURE0);
 
   RenderSkeleton(Self.FspSkeleton);
 
-  glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
 
