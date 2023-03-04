@@ -81,6 +81,7 @@ type
   TCastleSpineData = record
     Atlas: PspAtlas;
     SkeletonJson: PspSkeletonJson;
+    SkeletonBinary: PspSkeletonBinary;
     SkeletonData: PspSkeletonData;
     AnimationStateData: PspAnimationStateData;
   end;
@@ -174,7 +175,6 @@ type
     procedure ExposeTransformsChange(Sender: TObject);
     procedure GLContextOpen;
     procedure InternalLoadSpine;
-    procedure InternalPlayAnimation;
     procedure SetAutoAnimations(const Value: TStrings);
     procedure SetAutoAnimationsLoop(const V: Boolean);
     procedure SetColorForPersistent(const AValue: TVector4);
@@ -184,7 +184,7 @@ type
     procedure SetSkins(const Value: TStrings);
   public
     { Keep track of track entries }
-    TrackEntries: array[0..29] of PspTrackEntry;
+    TrackEntries: array[0..99] of PspTrackEntry;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     {$ifdef CASTLE_DESIGN_MODE}
@@ -195,6 +195,7 @@ type
     procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
     procedure LocalRender(const Params: TRenderParams); override;
     function LocalBoundingBox: TBox3D; override;
+    procedure InternalPlayAnimation;
     { Similar to PlayAnimation. The Track parameter tell Spine runtime which track we play the animation, allows to mix multiple animations }
     function PlayAnimation(const AnimationName: string; const Loop: boolean; const Forward: boolean = true; const Track: Integer = 0): boolean; overload;
     function PlayAnimation(const Parameters: TCastleSpinePlayAnimationParameters): boolean; overload;
@@ -211,6 +212,7 @@ type
     property Shader: TGLSLProgram read FShader write FShader;
     property Skeleton: PspSkeleton read FspSkeleton;
     property Bounds: PspSkeletonBounds read FspSkeletonBounds;
+    property IsGLContextInitialized: Boolean read FIsGLContextInitialized;
   published
     property ProcessEvents: Boolean read FProcessEvents write FProcessEvents;
     property DefaultAnimationTransition: Single read FDefaultAnimationTransition write FDefaultAnimationTransition default 0;
@@ -743,7 +745,11 @@ begin
   begin
     SpineData := Self[Key];
     spAtlas_dispose(SpineData^.Atlas);
-    spSkeletonJson_dispose(SpineData^.SkeletonJson);
+    if SpineData^.SkeletonJson <> nil then
+      spSkeletonJson_dispose(SpineData^.SkeletonJson)
+    else
+    if SpineData^.SkeletonBinary <> nil then
+      spSkeletonBinary_dispose(SpineData^.SkeletonBinary);
     spSkeletonData_dispose(SpineData^.SkeletonData);
     spAnimationStateData_dispose(SpineData^.AnimationStateData);
     Dispose(SpineData);
@@ -809,6 +815,7 @@ var
   SpineData: PCastleSpineData;
   I, J: Integer;
   HasCustomSkin: Boolean = False;
+  IsBinary: Boolean = False;
 begin
   Self.Cleanup;
 
@@ -829,6 +836,7 @@ begin
 
     Path := ExtractFilePath(Self.FURL);
     SkeletonFullPath := Self.FURL;
+    IsBinary := LowerCase(ExtractFileExt(SkeletonFullPath)) = '.skel';
     AtlasFullPath := Path + StringReplace(ExtractFileName(Self.FURL), ExtractFileExt(Self.FURL), '', [rfReplaceAll]) + '.atlas';
 
     // Load atlas
@@ -840,15 +848,26 @@ begin
 
     // Load skeleton data
     MS := Download(SkeletonFullPath, [soForceMemoryStream]) as TMemoryStream;
-    SS := TStringStream.Create('');
-    try
-      SS.CopyFrom(MS, MS.Size);
-      SpineData^.SkeletonJson := spSkeletonJson_create(SpineData^.Atlas);
-      if SpineData^.SkeletonJson = nil then
-        raise Exception.Create('Failed to load spine model');
-      SpineData^.SkeletonData := spSkeletonJson_readSkeletonData(SpineData^.SkeletonJson, PChar(SS.DataString));
-    finally
-      SS.Free;
+    if not IsBinary then
+    begin
+      SS := TStringStream.Create('');
+      try
+        SS.CopyFrom(MS, MS.Size);
+        SpineData^.SkeletonBinary := nil;
+        SpineData^.SkeletonJson := spSkeletonJson_create(SpineData^.Atlas);
+        if SpineData^.SkeletonJson = nil then
+          raise Exception.Create('Failed to load Spine JSON model');
+        SpineData^.SkeletonData := spSkeletonJson_readSkeletonData(SpineData^.SkeletonJson, PChar(SS.DataString));
+      finally
+        SS.Free;
+      end;
+    end else
+    begin
+      SpineData^.SkeletonJson := nil;
+      SpineData^.SkeletonBinary := spSkeletonBinary_create(SpineData^.Atlas);
+      if SpineData^.SkeletonBinary = nil then
+        raise Exception.Create('Failed to load Spine Binary model');
+      SpineData^.SkeletonData := spSkeletonBinary_readSkeletonData(SpineData^.SkeletonBinary, MS.Memory, MS.Size);
     end;
     MS.Free;
 
