@@ -169,6 +169,7 @@ type
     FProcessEvents: Boolean;
     FShader: TGLSLProgram;
     FSkins: TStrings;
+    FMipmap: Boolean;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -226,6 +227,7 @@ type
     property AutoAnimationsLoop: Boolean read FAutoAnimationsLoop write SetAutoAnimationsLoop default true;
     property EnableFog: Boolean read FEnableFog write FEnableFog default False;
     property ColorPersistent: TCastleColorPersistent read FColorPersistent;
+    property Mipmap: Boolean read FMipmap write FMipmap default False;
     property SmoothTexture: Boolean read FSmoothTexture write FSmoothTexture default True;
     property DistanceCulling: Single read FDistanceCulling write FDistanceCulling default 0;
     property ExposeTransforms: TStrings read FExposeTransforms write SetExposeTransforms;
@@ -1307,11 +1309,21 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
       glBindTexture(GL_TEXTURE_2D, Image.Texture);
       if Self.FSmoothTexture then
       begin
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        if Self.FMipmap then
+        begin
+          glGenerateMipmap(GL_TEXTURE_2D);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        end else
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       end else
       begin
+        if Self.FMipmap then
+        begin
+          glGenerateMipmap(GL_TEXTURE_2D);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+        end else
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       end;
