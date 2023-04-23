@@ -1301,10 +1301,20 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
       if TotalVertexCount = 0 then
         Exit;
       // Render result
-      if Image.SmoothScaling <> Self.FSmoothTexture then
-        Image.SmoothScaling := Self.FSmoothTexture;
+      //if Image.SmoothScaling <> Self.FSmoothTexture then
+      //  Image.SmoothScaling := Self.FSmoothTexture;
 
       glBindTexture(GL_TEXTURE_2D, Image.Texture);
+      if Self.FSmoothTexture then
+      begin
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      end else
+      begin
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      end;
 
       glBufferSubData(GL_ARRAY_BUFFER, 0, TotalVertexCount * SizeOf(TCastleSpineVertex), @SpineVertices[0]);
 
