@@ -1333,7 +1333,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
       glDrawArrays(GL_TRIANGLES, 0, TotalVertexCount);
 
       TotalVertexCount := 0;
-      if not Self.ExcludeFromStatistics then
+      //if not Self.ExcludeFromStatistics then
       begin
         Inc(Params.Statistics.ShapesRendered);
         Inc(Params.Statistics.ShapesVisible);
@@ -1482,7 +1482,7 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    if not Self.ExcludeFromStatistics then
+    //if not Self.ExcludeFromStatistics then
     begin
       Inc(Params.Statistics.ScenesRendered);
     end;
@@ -1502,7 +1502,7 @@ begin
   if (not Self.Visible) or (not Self.Exists) or Params.InShadow or (not Params.Transparent) or (Params.StencilTest > 0) then
     Exit;
 
-  if not Self.ExcludeFromStatistics then
+  //if not Self.ExcludeFromStatistics then
   begin
     Inc(Params.Statistics.ScenesVisible);
   end;
