@@ -13,7 +13,7 @@ Currently it provides support for Spine version 4.1. Make sure to download the c
 
 ## Additional features compare to CGE's own runtime
 - Skeletal animations (can mix multiple animations on the same meshes)
-- Constraints (IK, Transform, Path)
+- Constraints (IK, Transform, Path, Physics)
 - Clipping attachments
 - Point attachments
 - Events
