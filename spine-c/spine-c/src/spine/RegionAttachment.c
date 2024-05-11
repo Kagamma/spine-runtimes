@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated September 24, 2021. Replaces all prior versions.
+ * Last updated July 28, 2023. Replaces all prior versions.
  *
- * Copyright (c) 2013-2021, Esoteric Software LLC
+ * Copyright (c) 2013-2023, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software
- * or otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software or
+ * otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
+ * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include <spine/RegionAttachment.h>
@@ -79,22 +79,39 @@ spRegionAttachment *spRegionAttachment_create(const char *name) {
 }
 
 void spRegionAttachment_updateRegion(spRegionAttachment *self) {
-	float regionScaleX = self->width / self->region->originalWidth * self->scaleX;
-	float regionScaleY = self->height / self->region->originalHeight * self->scaleY;
-	float localX = -self->width / 2 * self->scaleX + self->region->offsetX * regionScaleX;
-	float localY = -self->height / 2 * self->scaleY + self->region->offsetY * regionScaleY;
-	float localX2 = localX + self->region->width * regionScaleX;
-	float localY2 = localY + self->region->height * regionScaleY;
-	float radians = self->rotation * DEG_RAD;
-	float cosine = COS(radians), sine = SIN(radians);
-	float localXCos = localX * cosine + self->x;
-	float localXSin = localX * sine;
-	float localYCos = localY * cosine + self->y;
-	float localYSin = localY * sine;
-	float localX2Cos = localX2 * cosine + self->x;
-	float localX2Sin = localX2 * sine;
-	float localY2Cos = localY2 * cosine + self->y;
-	float localY2Sin = localY2 * sine;
+	float regionScaleX, regionScaleY, localX, localY, localX2, localY2;
+	float radians, cosine, sine;
+	float localXCos, localXSin, localYCos, localYSin, localX2Cos, localX2Sin, localY2Cos, localY2Sin;
+
+	if (self->region == NULL) {
+		self->uvs[0] = 0;
+		self->uvs[1] = 0;
+		self->uvs[2] = 1;
+		self->uvs[3] = 1;
+		self->uvs[4] = 1;
+		self->uvs[5] = 0;
+		self->uvs[6] = 0;
+		self->uvs[7] = 0;
+		return;
+	}
+
+	regionScaleX = self->width / self->region->originalWidth * self->scaleX;
+	regionScaleY = self->height / self->region->originalHeight * self->scaleY;
+	localX = -self->width / 2 * self->scaleX + self->region->offsetX * regionScaleX;
+	localY = -self->height / 2 * self->scaleY + self->region->offsetY * regionScaleY;
+	localX2 = localX + self->region->width * regionScaleX;
+	localY2 = localY + self->region->height * regionScaleY;
+	radians = self->rotation * DEG_RAD;
+	cosine = COS(radians), sine = SIN(radians);
+	localXCos = localX * cosine + self->x;
+	localXSin = localX * sine;
+	localYCos = localY * cosine + self->y;
+	localYSin = localY * sine;
+	localX2Cos = localX2 * cosine + self->x;
+	localX2Sin = localX2 * sine;
+	localY2Cos = localY2 * cosine + self->y;
+	localY2Sin = localY2 * sine;
+
 	self->offset[BLX] = localXCos - localYSin;
 	self->offset[BLY] = localYCos + localXSin;
 	self->offset[ULX] = localXCos - localY2Sin;
