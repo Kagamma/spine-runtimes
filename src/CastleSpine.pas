@@ -38,7 +38,6 @@ uses
   {$ifdef CASTLE_DESIGN_MODE}
   PropEdits, CastlePropEdits, CastleDebugTransform, Forms, Controls, Graphics, Dialogs,
   ButtonPanel, StdCtrls, ExtCtrls, CastleInternalExposeTransformsDialog,
-  CastleClassUtils,
   {$endif}
   CastleVectors, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
@@ -1254,7 +1253,8 @@ begin
             D.Bone^.rotation := D.Rotation;
           end;
         end;
-        spSkeleton_updateWorldTransform(Self.FspSkeleton);
+        spSkeleton_update(Self.FspSkeleton, SecondsPassed);
+        spSkeleton_updateWorldTransform(Self.FspSkeleton, SP_PHYSICS_UPDATE);
         spSkeletonBounds_update(Self.FspSkeletonBounds, Self.FspSkeleton, True);
         Self.FControlBoneList.Clear;
         Self.FTicks := 0;

@@ -62,12 +62,12 @@ type
     SP_ATLAS_CLAMPTOEDGE,
     SP_ATLAS_REPEAT
   );
-  TspTransformMode = (
-    SP_TRANSFORMMODE_NORMAL,
-    SP_TRANSFORMMODE_ONLYTRANSLATION,
-    SP_TRANSFORMMODE_NOROTATIONORREFLECTION,
-    SP_TRANSFORMMODE_NOSCALE,
-    SP_TRANSFORMMODE_NOSCALEORREFLECTION
+  TspInherit = (
+    SP_INHERIT_NORMAL,
+    SP_INHERIT_ONLYTRANSLATION,
+    SP_INHERIT_NOROTATIONORREFLECTION,
+    SP_INHERIT_NOSCALE,
+    SP_INHERIT_NOSCALEORREFLECTION
   );
   TspEventType = (
     SP_ANIMATION_START,
@@ -76,6 +76,12 @@ type
     SP_ANIMATION_COMPLETE,
     SP_ANIMATION_DISPOSE,
     SP_ANIMATION_EVENT
+  );
+  TspPhysics = (
+    SP_PHYSICS_NONE,
+    SP_PHYSICS_RESET,
+    SP_PHYSICS_UPDATE,
+    SP_PHYSICS_POSE
   );
   {$packenum 1}
 
@@ -120,6 +126,8 @@ type
   PspPathConstraint = Pointer;
   PspTextureRegion = ^TspTextureRegion;
   PPspPathConstraint = ^PspPathConstraint;
+  PspPhysicsConstraint = Pointer;
+  PPspPhysicsConstraint = ^PspPhysicsConstraint;
   PspSlot = ^TspSlot;
   PPspSlot = ^PspSlot;
   PspVertexAttachment = ^TspVertexAttachment;
@@ -129,6 +137,8 @@ type
   PspIkConstraintDataArray = Pointer;
   PspTransformConstraintDataArray = Pointer;
   PspPathConstraintDataArray = Pointer;
+  PspPhysicsConstraintData = Pointer;
+  PspPhysicsConstraintDataArray = Pointer;
 
   TspColor = record
     r, g, b, a: cfloat;
@@ -176,6 +186,8 @@ type
     ikConstraints: PspIkConstraintDataArray;
     transformConstraints: PspTransformConstraintDataArray;
     pathConstraints: PspPathConstraintDataArray;
+    physicsConstraints: PspPhysicsConstraintDataArray;
+    color: TspColor;
   end;
 
   TspBoneData = record
@@ -184,9 +196,11 @@ type
     parent: PspBoneData;
     length: cfloat;
     x, y, rotation, scaleX, scaleY, shearX, shearY: cfloat;
-    transformMode: TspTransformMode;
+    inherit: TspInherit;
     skinRequired: cbool;
     color: TspColor;
+    icon: PChar;
+    visible: cint;
   end;
 
   TspTextureRegion = record
@@ -233,6 +247,8 @@ type
     color: TspColor;
     darkColor: PspColor;
     blendMode: TspBlendMode;
+    visible: cint;
+    path: PChar;
   end;
   PspSlotData = ^TspSlotData;
 
@@ -240,6 +256,7 @@ type
     version: PChar;
     hash: PChar;
     x, y, width, height: cfloat;
+    referenceScale: cfloat;
     fps: cfloat;
     imagesPath: PChar;
     audioPath: PChar;
@@ -262,6 +279,8 @@ type
     transformConstraints: ^PspTransformConstraintData;
     pathConstraintsCount: cint;
     pathConstraints: ^PspPathConstraintData;
+    physicsConstraintsCount: cint;
+    physicsConstraints: ^PspPhysicsConstraintData;
   end;
 
   PspAnimationStateData = Pointer;
@@ -339,6 +358,7 @@ type
     c, d, worldY: cfloat;
     sorted: cbool;
     active: cbool;
+    inherit: TspInherit;
   end;
 
   TspSlot = record
@@ -348,6 +368,10 @@ type
     darkColor: PspColor;
     attachment: PspAttachment;
     attachmentState: cint;
+    deformCapacity: cint;
+    deformCount: cint;
+    deform: pcfloat;
+    sequenceIndex: cint;
   end;
 
   TspSkeleton = record
@@ -367,11 +391,13 @@ type
     transformConstraints: PPspTransformConstraint;
     pathConstraintsCount: cint;
     pathConstraints: PPspPathConstraint;
+    physicsConstraintsCount: cint;
+    physicsConstraints: PPspPhysicsConstraint;
     skin: PspSkin;
     color: TspColor;
-    time: cfloat;
     scaleX, scaleY: cfloat;
     x, y: cfloat;
+    time: cfloat;
   end;
 
   TspVertexAttachment = record
@@ -381,7 +407,7 @@ type
     verticesCount: cint;
     vertices: pcfloat;
     worldVerticesLength: cint;
-    deformAttachment: PspVertexAttachment;
+    timelineAttachment: PspAttachment;
     id: cint;
   end;
 
@@ -399,7 +425,7 @@ type
     hullLength: cint;
     parentMesh: PspMeshAttachment;
     edgesCount: cint;
-    edges: pcint;
+    edges: pcushort;
     width, height: cfloat;
   end;
 
@@ -409,7 +435,7 @@ type
     listener: Pointer;
     trackIndex: cint;
     loop, holdPrevious, reverse, shortestRotation: cint;
-    eventThreshold, attachmentThreshold, drawOrderThreshold: cfloat;
+    eventThreshold, mixAttachmentThreshold, alphaAttachmentThreshold, mixDrawOrdertThreshold: cfloat;
     animationStart, animationEnd, animationLast, nextAnimationLast: cfloat;
     delay, trackTime, trackLast, nextTrackLast, trackEnd, timeScale: cfloat;
     alpha, mixTime, mixDuration, interruptAlpha, totalAlpha: cfloat;
@@ -470,7 +496,8 @@ var
   spSkeleton_dispose: procedure(Skeleton: PspSkeleton); SPINECALL;
   spSkeletonData_dispose: procedure(SkeletonData: PspSkeletonData); SPINECALL;
   spSkeletonData_findSkin: function(SkeletonJson: PspSkeletonJson; Name: PChar): PspSkin; SPINECALL;
-  spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton); SPINECALL;
+  spSkeleton_updateWorldTransform: procedure(Skeleton: PspSkeleton; Physics: TspPhysics); SPINECALL;
+  spSkeleton_update: procedure(Skeleton: PspSkeleton; Delta: cfloat); SPINECALL;
   spSkeleton_findBone: function(Skeleton: PspSkeleton; Name: PChar): PspBone; SPINECALL;
   spSkeleton_setSkin: procedure(Skeleton: PspSkeleton; Skin: PspSkin); SPINECALL;
   spSkeleton_setSkinByName: function(Skeleton: PspSkeleton; Name: PChar): cint; SPINECALL;
@@ -589,6 +616,7 @@ begin;
   spSkeletonData_dispose := GetProcedureAddress(Lib, 'spSkeletonData_dispose');
   spSkeletonData_findSkin := GetProcedureAddress(Lib, 'spSkeletonData_findSkin');
   spSkeleton_updateWorldTransform := GetProcedureAddress(Lib, 'spSkeleton_updateWorldTransform');
+  spSkeleton_update := GetProcedureAddress(Lib, 'spSkeleton_update');
   spSkeleton_findBone := GetProcedureAddress(Lib, 'spSkeleton_findBone');
   spSkeleton_setSkin := GetProcedureAddress(Lib, 'spSkeleton_setSkin');
   spSkeleton_setSkinByName := GetProcedureAddress(Lib, 'spSkeleton_setSkinByName');
