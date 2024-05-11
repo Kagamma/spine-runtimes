@@ -9,7 +9,7 @@ https://youtu.be/kN0bVr4CJjg
 Based on the official `spine-c` runtime. This provides an alternative way to load and play Spine models in Castle Game Engine (CGE) beside the engine's own runtime implementation (which lack many Spine features compare to Spine's official runtime).
 
 ## Version Requirements
-Currently it provides support for Spine version 4.1. Make sure to download the correct version of dynamic library in `Release` and clone source code from the 4.1 branch.
+Currently it provides support for Spine version 4.2. Make sure to download the correct version of dynamic library in `Release` and clone source code from the 4.2 branch.
 
 ## Additional features compare to CGE's own runtime
 - Skeletal animations (can mix multiple animations on the same meshes)
