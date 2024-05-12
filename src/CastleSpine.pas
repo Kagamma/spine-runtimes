@@ -39,7 +39,7 @@ uses
   PropEdits, CastlePropEdits, CastleDebugTransform, Forms, Controls, Graphics, Dialogs,
   ButtonPanel, StdCtrls, ExtCtrls, CastleInternalExposeTransformsDialog,
   {$endif}
-  CastleVectors, CastleApplicationProperties, CastleTransform, CastleComponentSerialize,
+  CastleVectors, CastleApplicationProperties, CastleTransform, CastleComponentSerialize, CastleGLVersion,
   CastleBoxes, CastleUtils, CastleLog, CastleRenderContext, CastleGLShaders, CastleDownload, CastleURIUtils,
   CastleGLImages, X3DNodes, CastleColors, CastleClassUtils, CastleBehaviors, CastleRenderOptions;
 
@@ -170,6 +170,7 @@ type
     FShader: TGLSLProgram;
     FSkins: TStrings;
     FMipmap: Boolean;
+    FIsCoreProfile: Boolean;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
@@ -244,7 +245,7 @@ uses
   Math;
 
 const
-  VertexShaderSource =
+  VertexShaderSourceLegacy: String =
 'attribute vec2 inVertex;'nl
 'attribute vec2 inTexCoord;'nl
 'attribute vec4 inColor;'nl
@@ -264,7 +265,7 @@ const
 '  gl_Position = pMatrix * p;'nl
 '}';
 
-  FragmentShaderSource: String =
+  FragmentShaderSourceLegacy: String =
 'varying vec2 fragTexCoord;'nl
 'varying vec4 fragColor;'nl
 'varying float fragFogCoord;'nl
@@ -280,6 +281,49 @@ const
 '  if (fogEnable == 1) {'nl
 '    float fogFactor = (fogEnd - fragFogCoord) / fogEnd;'nl
 '    gl_FragColor.rgb = mix(fogColor, gl_FragColor.rgb, clamp(fogFactor, 0.0, 1.0));'nl
+'  }'nl
+'}';
+
+  VertexShaderSource: String =
+'#version 330'nl
+'layout(location = 0) in vec2 inVertex;'nl
+'layout(location = 1) in vec2 inTexCoord;'nl
+'layout(location = 2) in vec4 inColor;'nl
+
+'out vec2 fragTexCoord;'nl
+'out vec4 fragColor;'nl
+'out float fragFogCoord;'nl
+
+'uniform mat4 mvMatrix;'nl
+'uniform mat4 pMatrix;'nl
+
+'void main() {'nl
+'  fragTexCoord = inTexCoord;'nl
+'  fragColor = inColor;'nl
+'  vec4 p = mvMatrix * vec4(inVertex, 0.0, 1.0);'nl
+'  fragFogCoord = abs(p.z / p.w);'nl
+'  gl_Position = pMatrix * p;'nl
+'}';
+
+  FragmentShaderSource: String =
+'#version 330'nl
+'in vec2 fragTexCoord;'nl
+'in vec4 fragColor;'nl
+'in float fragFogCoord;'nl
+
+'out vec4 outColor;'nl
+
+'uniform sampler2D baseColor;'nl
+'uniform int fogEnable;'nl
+'uniform float fogEnd;'nl
+'uniform vec3 fogColor;'nl
+'uniform vec4 color;'nl
+
+'void main() {'nl
+'  outColor = texture2D(baseColor, fragTexCoord) * fragColor * color;'nl
+'  if (fogEnable == 1) {'nl
+'    float fogFactor = (fogEnd - fragFogCoord) / fogEnd;'nl
+'    outColor.rgb = mix(fogColor, fragColor.rgb, clamp(fogFactor, 0.0, 1.0));'nl
 '  }'nl
 '}';
 
@@ -774,8 +818,17 @@ begin
   if RenderProgram = nil then
   begin
     RenderProgram := TGLSLProgram.Create;
-    RenderProgram.AttachVertexShader(VertexShaderSource);
-    RenderProgram.AttachFragmentShader(FragmentShaderSource);
+    if GLVersion.AtLeast(3, 0) then
+    begin
+      Self.FIsCoreProfile := True;
+      RenderProgram.AttachVertexShader(VertexShaderSource);
+      RenderProgram.AttachFragmentShader(FragmentShaderSource);
+    end else
+    begin
+      Self.FIsCoreProfile := False;
+      RenderProgram.AttachVertexShader(VertexShaderSourceLegacy);
+      RenderProgram.AttachFragmentShader(VertexShaderSourceLegacy);
+    end;
     RenderProgram.Link;
     ApplicationProperties.OnGLContextClose.Add(@FreeGLContext);
   end;
