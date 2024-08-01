@@ -1579,7 +1579,7 @@ begin
   PreviousProgram := RenderContext.CurrentProgram;
   Self.FShader.Enable;
 
-  Self.FShader.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transform^);
+  Self.FShader.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transformation^.Transform);
   Self.FShader.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
   Self.FShader.Uniform('color').SetValue(Self.FColor);
   if Self.FEnableFog and (Params.GlobalFog <> nil) then
