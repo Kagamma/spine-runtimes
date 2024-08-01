@@ -1562,7 +1562,7 @@ begin
   end;
   if DistanceCulling > 0 then
   begin
-    RenderCameraPosition := Params.InverseTransform^.MultPoint(Params.RenderingCamera.Camera.Position);
+    RenderCameraPosition := Params.Transformation^.InverseTransform.MultPoint(Params.RenderingCamera.Camera.Position);
     if RenderCameraPosition.Length > DistanceCulling + LocalBoundingBox.Radius then
       Exit;
   end;
