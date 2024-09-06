@@ -1621,7 +1621,6 @@ begin
 
   if PreviousProgram <> nil then
   begin
-    PreviousProgram.Disable;
     PreviousProgram.Enable;
   end;
 end;
