@@ -171,9 +171,13 @@ type
     FSkins: TStrings;
     FMipmap: Boolean;
     FIsCoreProfile: Boolean;
+    //
+    FCameraMatrix: TMatrix4;
+    FGlobalFog: TFogNode;
     { Cleanup Spine resource associate with this instance }
     procedure Cleanup;
     procedure InternalExposeTransformsChange;
+    procedure InternalRender(const Transformation: TTransformation; const PassParams: TRenderOnePassParams);
     procedure ExposeTransformsChange(Sender: TObject);
     procedure GLContextOpen;
     procedure InternalLoadSpine;
@@ -1320,6 +1324,45 @@ end;
 
 procedure TCastleSpine.LocalRender(const Params: TRenderParams);
 
+var
+  RenderCameraPosition: TVector3;
+  RelativeBBox: TBox3D;
+begin
+  inherited;
+  if Self.FspAnimationState = nil then
+    Exit;
+  if not Self.FIsGLContextInitialized then
+    Exit;
+  if (not Self.Visible) or (not Self.Exists) then
+    Exit;
+
+  //if not Self.ExcludeFromStatistics then
+  begin
+    Inc(Params.Statistics.ScenesVisible);
+  end;
+  if DistanceCulling > 0 then
+  begin
+    RenderCameraPosition := Params.Transformation^.InverseTransform.MultPoint(Params.RenderingCamera.Camera.Position);
+    if RenderCameraPosition.Length > DistanceCulling + LocalBoundingBox.Radius then
+      Exit;
+  end;
+  if Self.FspSkeletonBounds^.minX < Self.FspSkeletonBounds^.maxX then
+  begin
+    RelativeBBox := Box3D(
+      Vector3(Self.FspSkeletonBounds^.minX, Self.FspSkeletonBounds^.minY, -0.0001),
+      Vector3(Self.FspSkeletonBounds^.maxX, Self.FspSkeletonBounds^.maxY, 0.0001)
+    );
+    if not Params.Frustum^.Box3DCollisionPossibleSimple(RelativeBBox) then
+      Exit;
+  end;
+
+  Self.FGlobalFog := TFogNode(Params.GlobalFog);
+  Self.FCameraMatrix := Params.RenderingCamera.Matrix;
+
+  Params.AddRenderEvent(@Self.InternalRender);
+end;
+
+procedure TCastleSpine.InternalRender(const Transformation: TTransformation; const PassParams: TRenderOnePassParams);
   procedure RenderSkeleton(const Skeleton: PspSkeleton);
 
     procedure AddVertex(const X, Y, U, V: Single; const Color: TVector4; var Indx: Cardinal); inline;
@@ -1388,10 +1431,11 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
 
       TotalVertexCount := 0;
       //if not Self.ExcludeFromStatistics then
-      begin
+      // TODO: We need to improve this. Maybe we should make use of shape collector mechanism and let CGE handle the drawings
+      {begin
         Inc(Params.Statistics.ShapesRendered);
         Inc(Params.Statistics.ShapesVisible);
-      end;
+      end;}
     end;
 
   begin
@@ -1537,54 +1581,29 @@ procedure TCastleSpine.LocalRender(const Params: TRenderParams);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     //if not Self.ExcludeFromStatistics then
-    begin
+    {begin
       Inc(Params.Statistics.ScenesRendered);
-    end;
+    end;}
   end;
 
 var
   PreviousProgram: TGLSLProgram;
   Fog: TFogFunctionality;
-  RenderCameraPosition: TVector3;
-  RelativeBBox: TBox3D;
 begin
-  inherited;
-  if Self.FspAnimationState = nil then
+  if PassParams.DisableShadowVolumeCastingLights or
+     (not PassParams.UsingBlending) or
+     PassParams.InsideStencilTest then
     Exit;
-  if not Self.FIsGLContextInitialized then
-    Exit;
-  if (not Self.Visible) or (not Self.Exists) or Params.InShadow or (not Params.Transparent) or (Params.StencilTest > 0) then
-    Exit;
-
-  //if not Self.ExcludeFromStatistics then
-  begin
-    Inc(Params.Statistics.ScenesVisible);
-  end;
-  if DistanceCulling > 0 then
-  begin
-    RenderCameraPosition := Params.Transformation^.InverseTransform.MultPoint(Params.RenderingCamera.Camera.Position);
-    if RenderCameraPosition.Length > DistanceCulling + LocalBoundingBox.Radius then
-      Exit;
-  end;
-  if Self.FspSkeletonBounds^.minX < Self.FspSkeletonBounds^.maxX then
-  begin
-    RelativeBBox := Box3D(
-      Vector3(Self.FspSkeletonBounds^.minX, Self.FspSkeletonBounds^.minY, -0.0001),
-      Vector3(Self.FspSkeletonBounds^.maxX, Self.FspSkeletonBounds^.maxY, 0.0001)
-    );
-    if not Params.Frustum^.Box3DCollisionPossibleSimple(RelativeBBox) then
-      Exit;
-  end;
 
   PreviousProgram := RenderContext.CurrentProgram;
   Self.FShader.Enable;
 
-  Self.FShader.Uniform('mvMatrix').SetValue(Params.RenderingCamera.Matrix * Params.Transformation^.Transform);
+  Self.FShader.Uniform('mvMatrix').SetValue(Self.FCameraMatrix * Transformation.Transform);
   Self.FShader.Uniform('pMatrix').SetValue(RenderContext.ProjectionMatrix);
   Self.FShader.Uniform('color').SetValue(Self.FColor);
-  if Self.FEnableFog and (Params.GlobalFog <> nil) then
+  if Self.FEnableFog and (Self.FGlobalFog <> nil) then
   begin
-    Fog := (Params.GlobalFog as TFogNode).Functionality(TFogFunctionality) as TFogFunctionality;
+    Fog := (Self.FGlobalFog as TFogNode).Functionality(TFogFunctionality) as TFogFunctionality;
     Self.FShader.Uniform('fogEnable').SetValue(1);
     Self.FShader.Uniform('fogEnd').SetValue(Fog.VisibilityRange);
     Self.FShader.Uniform('fogColor').SetValue(Fog.Color);
@@ -1600,7 +1619,11 @@ begin
   glDisable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
 
-  PreviousProgram.Enable;
+  if PreviousProgram <> nil then
+  begin
+    PreviousProgram.Disable;
+    PreviousProgram.Enable;
+  end;
 end;
 
 function TCastleSpine.LocalBoundingBox: TBox3D;
